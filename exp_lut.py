@@ -12,15 +12,6 @@ saturation = 5.0
 saturation_rate = 10.0
 sensitivity = 1.0
 
-# t_max = 50
-# crossover = 0.75*t_max
-# nonlinearity = 1
-# smooth = 0.5
-# saturation = 100000.0
-# saturation_rate = 1.0
-# sensitivity = 1
-
-
 # soft limits using tanh
 class limiter_t:
     def apply(self, t):
