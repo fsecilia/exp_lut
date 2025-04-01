@@ -5,13 +5,14 @@ import math
 # (4/3)(9/16) = (28/48) = 7/12 anisotropy: x*7/12 = x*0.58333333333333333333333333333333, xy*12/7 = 1.7142857142857142857142857142857
 
 t_max = 50
-crossover = 12.75
+crossover = 10
 nonlinearity = 1.0
 smooth = 0.5
 saturation = 5.0
 saturation_rate = 10.0
 sensitivity = 1.0
-tangent_correction = 0.0001
+tangent_correction_magnitude = 0.0001
+tangent_correction_radius = 0.001
 
 # t_max = 50
 # crossover = 0.75*t_max
@@ -88,25 +89,11 @@ class output_libinput_t:
 
 class generator_t:
     def generate(self, x):
-        #unfiltered = (math.exp(x*self.nonlinearity) - 1)/(math.exp(self.crossover*self.nonlinearity) - 1)
-        #unfiltered = (math.exp(self.crossover*math.pow(x/self.crossover, self.nonlinearity)) - 1)/(math.exp(self.crossover) - 1)
-
-        scale = x/tangent_correction
-        scale = math.log(scale)
-        sign = -1.0 if scale < 0.0 else 1.0
-        scale = math.pow(sign*scale, 0.5/smooth)
-        scale = math.tanh(scale)
-        scale = sign*math.pow(scale, smooth/0.5)
-        scale = (scale + 1)/2
-
-        # this makes it feel sluggish at smooth = 0.5. I need to investigate other smooth values, but it is difficulit
-        # to see what is happening until I have better visualization
-        scale = 1
-
+        tangent_correction = (math.tanh((x - tangent_correction_radius)/(2*tangent_correction_magnitude)) + 1)/2
         unfiltered = (math.exp(self.nonlinearity*x) - 1)/(math.exp(self.nonlinearity*self.crossover) - 1)
         filtered = self.saturation_limiter.apply(unfiltered)
 
-        return x*scale*self.sensitivity*filtered
+        return x*tangent_correction*self.sensitivity*filtered
 
     def __init__(self, sensitivity, crossover, nonlinearity, tangent_limiter, saturation_limiter):
         self.sensitivity = sensitivity
