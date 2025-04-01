@@ -5,14 +5,12 @@ import math
 # (4/3)(9/16) = (28/48) = 7/12 anisotropy: x*7/12 = x*0.58333333333333333333333333333333, xy*12/7 = 1.7142857142857142857142857142857
 
 t_max = 50
-crossover = 10
+crossover = 12.75
 nonlinearity = 1.0
 smooth = 0.5
 saturation = 5.0
 saturation_rate = 10.0
 sensitivity = 1.0
-tangent_correction_magnitude = 0.0001
-tangent_correction_radius = 0.001
 
 # t_max = 50
 # crossover = 0.75*t_max
@@ -89,11 +87,9 @@ class output_libinput_t:
 
 class generator_t:
     def generate(self, x):
-        tangent_correction = (math.tanh((x - tangent_correction_radius)/(2*tangent_correction_magnitude)) + 1)/2
         unfiltered = (math.exp(self.nonlinearity*x) - 1)/(math.exp(self.nonlinearity*self.crossover) - 1)
-        filtered = self.saturation_limiter.apply(unfiltered)
-
-        return x*tangent_correction*self.sensitivity*filtered
+        filtered = self.sensitivity*self.saturation_limiter.apply(unfiltered)
+        return x*filtered
 
     def __init__(self, sensitivity, crossover, nonlinearity, tangent_limiter, saturation_limiter):
         self.sensitivity = sensitivity
