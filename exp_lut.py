@@ -25,12 +25,12 @@ new_crossover = ln((e^old_crossover - 1)/relative_scale + 1)
 '''
 
 t_max = 50
-crossover = 12.75
-sensitivity = 4.0
+crossover = 10
+sensitivity = 1.0
 nonlinearity = 1.0
 smooth = 0.5
 saturation = 5.0
-saturation_rate = 1
+saturation_rate = 1.0
 
 # soft limits using tanh
 class limiter_t:
