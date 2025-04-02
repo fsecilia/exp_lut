@@ -64,8 +64,8 @@ class output_raw_accel_t:
         y = self.generator.generate(x)
 
         x *= t_max
-        y *= t_max
-        print(f"{x:.20f},{y:.20f};")
+        y *= x
+        print(f"{x:.24f},{y:.24f};")
 
     def __init__(self, generator):
         self.generator = generator
@@ -80,7 +80,7 @@ class output_libinput_t:
         y = self.generator.generate(x)
 
         y *= t_max
-        print(f"{y:.20f};")
+        print(f"{y:.24f};")
 
     def __init__(self, generator):
         self.generator = generator
@@ -90,7 +90,7 @@ class generator_t:
     def generate(self, x):
         unfiltered = (math.exp(self.nonlinearity*x) - 1)/(math.exp(self.nonlinearity*self.crossover) - 1)
         filtered = self.sensitivity*self.saturation_limiter.apply(unfiltered)
-        return x*filtered
+        return filtered
 
     def __init__(self, sensitivity, crossover, nonlinearity, tangent_limiter, saturation_limiter):
         self.sensitivity = sensitivity
