@@ -121,4 +121,13 @@ intuitive things.
 
 new_crossover = ln((e^old_crossover - 1)/relative_scale + 1)
 = ln(e^old_crossover + relative_scale - 1) - ln(relative_scale)
+
+
+in (e^tx - 1), t is literally the slope at x=0
+in (e^nx - 1)/(e^nc - 1), the slope is more complicated, but related
+
+c(e^nx - 1)/(e^nc - 1)
+= ce^nx/(e^nc - 1) - c/(e^nc - 1)
+
+So ths slope should be something like cn/(e^nc - 1)
 '''
