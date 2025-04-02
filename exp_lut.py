@@ -1,16 +1,26 @@
 import math
 
-# 9/16 anisotropy: x*9/16 = x*0.5625, xy*16/9 = 1.77777777777778
-# (3/4)(9/16) = (27/64) = (3/4)^2 anisotropy: x*27/64 = x*0.421875, xy*16/9 = 2.3703703703703703703703703703704
-# (4/3)(9/16) = (28/48) = 7/12 anisotropy: x*7/12 = x*0.58333333333333333333333333333333, xy*12/7 = 1.7142857142857142857142857142857
+'''
+9/16 anisotropy: x*9/16 = x*0.5625, xy*16/9 = 1.77777777777778
+(3/4)(9/16) = (27/64) = (3/4)^2 anisotropy: x*27/64 = x*0.421875, xy*16/9 = 2.3703703703703703703703703703704
+(4/3)(9/16) = (28/48) = 7/12 anisotropy: x*7/12 = x*0.58333333333333333333333333333333, xy*12/7 = 1.7142857142857142857142857142857
+
+The same curve produced by changing sensitivity can be reproduced with sensitivity=1 and a clever choice of crossover.
+crossover = 38.54813549926318, sensitivity = 16, misses limiter entirely
+crossover = 12.75, sensitivity = 4, hits limiter of 5@70 before 45
+crossover = 3.504998498211076, sensitivity = 1, hits 5@70 before 15
+
+Using sensitivity = 4 keeps a hint of the limiter. Is it too high to be useful?
+Could we just keep sensitivity = 1 and raise the limiter?
+'''
 
 t_max = 50
 crossover = 12.75
+sensitivity = 4.0
 nonlinearity = 1.0
 smooth = 0.5
 saturation = 5.0
-saturation_rate = 10.0
-sensitivity = 1.0
+saturation_rate = 1
 
 # soft limits using tanh
 class limiter_t:
