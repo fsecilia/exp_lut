@@ -1,11 +1,28 @@
-import math
+#! /usr/bin/env python3
 
-t_max = 50
-crossover = 10
-sensitivity = 1.0
-nonlinearity = 1.0
-saturation = 5.0
-saturation_rate = 1.0
+import math
+import argparse
+
+default_crossover = 10
+default_nonlinearity = 1.0
+default_sensitivity = 1.0
+default_limit = 5.0
+default_limit_rate = 1.0
+
+table_size = 50
+
+# generates c(e^nx - 1)/(e^nc - 1) and applies a limiter
+class generator_t:
+    def generate(self, x):
+        unlimited = (math.exp(self.nonlinearity*x) - 1)/(math.exp(self.nonlinearity*self.crossover) - 1)
+        limited = self.sensitivity*self.limiter.apply(unlimited)
+        return limited
+
+    def __init__(self, sensitivity, crossover, nonlinearity, limiter):
+        self.sensitivity = sensitivity
+        self.crossover = crossover
+        self.nonlinearity = nonlinearity
+        self.limiter = limiter
 
 # soft limits using tanh
 class limiter_t:
@@ -27,6 +44,7 @@ class sampler_curvature_t:
 
     def sample_location(self, t):
         # The curve should have more samples where the sensitivity changes most. For now, just oversample small t.
+        # The change in sensitivity is the derivative of the whole limited function, which is difficult.
         return (math.exp(math.pow(t, sampler_curvature_t.sample_density)) - 1)/(math.exp(1) - 1)
 
     def __init__(self, num_samples):
@@ -54,18 +72,18 @@ class output_raw_accel_t:
         x = self.sampler.sample_location(t)
         y = self.generator.generate(x)
 
-        x *= t_max
+        x *= table_size
         y *= x
         print(f"{x:.24f},{y:.24f};")
 
     def __init__(self, generator):
         self.generator = generator
-        self.sampler = sampler_curvature_t(t_max/output_raw_accel_t.num_samples)
+        self.sampler = sampler_curvature_t(table_size/output_raw_accel_t.num_samples)
 
-# libinput supports up to 64 uniformly-spaced samples
+# libinput supports up to 64 uniformly-spaced samples, but this includes 0.
 class output_libinput_t:
     num_samples = 63
-    motion_step = t_max/(num_samples + 1)
+    motion_step = table_size/(num_samples + 1)
 
     def on_begin(self):
         print("0 ", end="")
@@ -88,34 +106,40 @@ class output_libinput_t:
         self.generator = generator
         self.sampler = sampler_uniform_t(output_libinput_t.motion_step)
 
-class generator_t:
-    def generate(self, x):
-        unfiltered = (math.exp(self.nonlinearity*x) - 1)/(math.exp(self.nonlinearity*self.crossover) - 1)
-        filtered = self.sensitivity*self.saturation_limiter.apply(unfiltered)
-        return filtered
-
-    def __init__(self, sensitivity, crossover, nonlinearity, saturation_limiter):
-        self.sensitivity = sensitivity
-        self.crossover = crossover
-        self.nonlinearity = nonlinearity
-        self.saturation_limiter = saturation_limiter
-
 class app_t:
-    generator = generator_t(sensitivity, crossover/t_max, nonlinearity, limiter_t(saturation, saturation_rate))
-    #output = output_raw_accel_t(generator)
-    output = output_libinput_t(generator)
-
-    def run(self):
-        num_samples = self.output.num_samples
+    def run(self, output):
+        num_samples = output.num_samples
         dt = 1.0/num_samples
         t = 0.0
-        self.output.on_begin()
+        output.on_begin()
         for sample in range(num_samples):
             t += dt
-            self.output(t)
-        self.output.on_end()
+            output(t)
+        output.on_end()
 
-app_t().run()
+def create_arg_parser():
+    impl = argparse.ArgumentParser(prog="exp_lut.py",
+        description="Generates a lookup table for exponential input curves.")
+    impl.add_argument('-c', '--crossover', type=float, default=default_crossover)
+    impl.add_argument('-n', '--nonlinearity', type=float, default=default_nonlinearity)
+    impl.add_argument('-s', '--sensitivity', type=float, default=default_sensitivity)
+    impl.add_argument('-l', '--limit', type=float, default=default_limit)
+    impl.add_argument('-r', '--limit_rate', type=float, default=default_limit_rate)
+
+    format_choices={
+       "raw_accel": output_raw_accel_t,
+       "libinput": output_libinput_t,
+    }
+    default_format_choice = "raw_accel"
+    impl.add_argument('-f', '--format', choices=format_choices.keys(), default=default_format_choice)
+
+    result = impl.parse_args()
+    result.output_t = format_choices[result.format]
+    return result
+
+args = create_arg_parser()
+app_t().run(args.output_t(generator_t(args.sensitivity, args.crossover/table_size, args.nonlinearity,
+    limiter_t(args.limit, args.limit_rate))))
 
 '''
 9/16 anisotropy: x*9/16 = x*0.5625, xy*16/9 = 1.77777777777778
