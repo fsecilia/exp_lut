@@ -45,6 +45,12 @@ class sampler_uniform_t:
 class output_raw_accel_t:
     num_samples = 256
 
+    def on_begin(self):
+        pass
+
+    def on_end(self):
+        pass
+
     def __call__(self, t):
         x = self.sampler.sample_location(t)
         y = self.generator.generate(x)
@@ -59,18 +65,29 @@ class output_raw_accel_t:
 
 # libinput supports up to 64 uniformly-spaced samples
 class output_libinput_t:
-    num_samples = 64
+    num_samples = 63
+    motion_step = t_max/(num_samples + 1)
+
+    def on_begin(self):
+        print("0 ", end="")
+
+    def on_end(self):
+        print("")
 
     def __call__(self, t):
         x = self.sampler.sample_location(t)
         y = self.generator.generate(x)
 
-        y *= t_max
-        print(f"{y:.24f};")
+        y *= x
+
+        # there is some scalar conversion I'm missing because it is too fast. probably dpi
+        y /= 4
+
+        print(f"{y:.24f} ", end="")
 
     def __init__(self, generator):
         self.generator = generator
-        self.sampler = sampler_uniform_t(t_max/output_libinput_t.num_samples)
+        self.sampler = sampler_uniform_t(output_libinput_t.motion_step)
 
 class generator_t:
     def generate(self, x):
@@ -87,15 +104,18 @@ class generator_t:
 
 class app_t:
     generator = generator_t(sensitivity, crossover/t_max, nonlinearity, limiter_t(1.0, 0.5/smooth), limiter_t(saturation, saturation_rate))
-    output = output_raw_accel_t(generator)
+    #output = output_raw_accel_t(generator)
+    output = output_libinput_t(generator)
 
     def run(self):
         num_samples = self.output.num_samples
         dt = 1.0/num_samples
         t = 0.0
+        self.output.on_begin()
         for sample in range(num_samples):
             t += dt
             self.output(t)
+        self.output.on_end()
 
 app_t().run()
 
