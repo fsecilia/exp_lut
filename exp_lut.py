@@ -12,6 +12,16 @@ crossover = 3.504998498211076, sensitivity = 1, hits 5@70 before 15
 
 Using sensitivity = 4 keeps a hint of the limiter. Is it too high to be useful?
 Could we just keep sensitivity = 1 and raise the limiter?
+
+With no limiter, you can produce the same curve by varying sensitivity or crossover, but as knobs they do different
+things. Sensitivity is a final scalar applied after limiting to the numerator. Crossover is applied before limiting,
+and it is summed in the denominator, so it isn't as direct of a control over the final output scale as sensitivity is.
+To scale the final output by 4, you just increase the sensitivity by 4. To increase the final output scale using
+crossover requires solving the denominator. They affect the output in related ways, but they control different
+intuitive things.
+
+new_crossover = ln((e^old_crossover - 1)/relative_scale + 1)
+= ln(e^old_crossover + relative_scale - 1) - ln(relative_scale)
 '''
 
 t_max = 50
