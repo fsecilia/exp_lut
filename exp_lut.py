@@ -140,12 +140,34 @@ intuitive things.
 new_crossover = ln((e^old_crossover - 1)/relative_scale + 1)
 = ln(e^old_crossover + relative_scale - 1) - ln(relative_scale)
 
-
 in (e^tx - 1), t is literally the slope at x=0
 in (e^nx - 1)/(e^nc - 1), the slope is more complicated, but related
 
 c(e^nx - 1)/(e^nc - 1)
 = ce^nx/(e^nc - 1) - c/(e^nc - 1)
 
-So ths slope should be something like cn/(e^nc - 1)
+So ths slope should be something like cn/(e^nc - 1).
+
+We need to solve for the derivative.
+f(x) = c(e^nx - 1)/(e^nc - 1)
+g(x) = l*tanh((f(x)/l)^r)^(1/r)
+= l*tanh(((c(e^nx - 1)/(e^nc - 1))/l)^r)^(1/r)
+
+tanh(x) = (e^x - e^-x)/(e^x + e^-x)
+= (e^2x - 1)/(e^2x + 1)
+
+tanh((f(x)/l))^r) =
+= (e^(2((f(x)/l))^r)) - 1)/(e^(2((f(x)/l))^r)) + 1)
+= (e^(2(f(x)^r)(l^-r)) - 1)/(e^(2(f(x)^r)(l^-r)) + 1)
+= (e^(2((c(e^nx - 1)/(e^nc - 1))^r)(l^-r)) - 1)/(e^(2((c(e^nx - 1)/(e^nc - 1))^r)(l^-r)) + 1)
+
+((ce^nx - c)/(e^nc - 1))^r
+(ce^nx/(e^nc - 1) - c/(e^nc - 1))^r
+
+wolfram suggests
+d/dx g(x) = d/dx(l tanh(((c (e^(n x) - 1))/((e^(n c) - 1) l))^r)^(1/r)) = (l n e^(n x) ((c (e^(n x) - 1))/(l (e^(c n) - 1)))^r tanh^(1/r - 1)(((c (e^(n x) - 1))/(l (e^(c n) - 1)))^r) sech^2(((c (e^(n x) - 1))/(l (e^(c n) - 1)))^r))/(e^(n x) - 1)
+= d/dx l*tanh((c(e^nx - 1))/(l(e^nc - 1)))^r)^(1/r)
+
+u = ((c(e^nx - 1))/(l(e^nc - 1)))^r
+d/dx = u(nl)(e^nx)(tanh(u)^(1/r - 1))(sech(u)^2)/(e^nx - 1)
 '''
