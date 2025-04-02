@@ -1,29 +1,5 @@
 import math
 
-'''
-9/16 anisotropy: x*9/16 = x*0.5625, xy*16/9 = 1.77777777777778
-(3/4)(9/16) = (27/64) = (3/4)^2 anisotropy: x*27/64 = x*0.421875, xy*16/9 = 2.3703703703703703703703703703704
-(4/3)(9/16) = (28/48) = 7/12 anisotropy: x*7/12 = x*0.58333333333333333333333333333333, xy*12/7 = 1.7142857142857142857142857142857
-
-The same curve produced by changing sensitivity can be reproduced with sensitivity=1 and a clever choice of crossover.
-crossover = 38.54813549926318, sensitivity = 16, misses limiter entirely
-crossover = 12.75, sensitivity = 4, hits limiter of 5@70 before 45
-crossover = 3.504998498211076, sensitivity = 1, hits 5@70 before 15
-
-Using sensitivity = 4 keeps a hint of the limiter. Is it too high to be useful?
-Could we just keep sensitivity = 1 and raise the limiter?
-
-With no limiter, you can produce the same curve by varying sensitivity or crossover, but as knobs they do different
-things. Sensitivity is a final scalar applied after limiting to the numerator. Crossover is applied before limiting,
-and it is summed in the denominator, so it isn't as direct of a control over the final output scale as sensitivity is.
-To scale the final output by 4, you just increase the sensitivity by 4. To increase the final output scale using
-crossover requires solving the denominator. They affect the output in related ways, but they control different
-intuitive things.
-
-new_crossover = ln((e^old_crossover - 1)/relative_scale + 1)
-= ln(e^old_crossover + relative_scale - 1) - ln(relative_scale)
-'''
-
 t_max = 50
 crossover = 10
 sensitivity = 1.0
@@ -122,3 +98,27 @@ class app_t:
             self.output(t)
 
 app_t().run()
+
+'''
+9/16 anisotropy: x*9/16 = x*0.5625, xy*16/9 = 1.77777777777778
+(3/4)(9/16) = (27/64) = (3/4)^2 anisotropy: x*27/64 = x*0.421875, xy*16/9 = 2.3703703703703703703703703703704
+(4/3)(9/16) = (28/48) = 7/12 anisotropy: x*7/12 = x*0.58333333333333333333333333333333, xy*12/7 = 1.7142857142857142857142857142857
+
+The same curve produced by changing sensitivity can be reproduced with sensitivity=1 and a clever choice of crossover.
+crossover = 38.54813549926318, sensitivity = 16, misses limiter entirely
+crossover = 12.75, sensitivity = 4, hits limiter of 5@70 before 45
+crossover = 3.504998498211076, sensitivity = 1, hits 5@70 before 15
+
+Using sensitivity = 4 keeps a hint of the limiter. Is it too high to be useful?
+Could we just keep sensitivity = 1 and raise the limiter?
+
+With no limiter, you can produce the same curve by varying sensitivity or crossover, but as knobs they do different
+things. Sensitivity is a final scalar applied after limiting to the numerator. Crossover is applied before limiting,
+and it is summed in the denominator, so it isn't as direct of a control over the final output scale as sensitivity is.
+To scale the final output by 4, you just increase the sensitivity by 4. To increase the final output scale using
+crossover requires solving the denominator. They affect the output in related ways, but they control different
+intuitive things.
+
+new_crossover = ln((e^old_crossover - 1)/relative_scale + 1)
+= ln(e^old_crossover + relative_scale - 1) - ln(relative_scale)
+'''
