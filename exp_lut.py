@@ -4,7 +4,6 @@ t_max = 50
 crossover = 10
 sensitivity = 1.0
 nonlinearity = 1.0
-smooth = 0.5
 saturation = 5.0
 saturation_rate = 1.0
 
@@ -95,15 +94,14 @@ class generator_t:
         filtered = self.sensitivity*self.saturation_limiter.apply(unfiltered)
         return filtered
 
-    def __init__(self, sensitivity, crossover, nonlinearity, tangent_limiter, saturation_limiter):
+    def __init__(self, sensitivity, crossover, nonlinearity, saturation_limiter):
         self.sensitivity = sensitivity
         self.crossover = crossover
         self.nonlinearity = nonlinearity
-        self.tangent_limiter = tangent_limiter
         self.saturation_limiter = saturation_limiter
 
 class app_t:
-    generator = generator_t(sensitivity, crossover/t_max, nonlinearity, limiter_t(1.0, 0.5/smooth), limiter_t(saturation, saturation_rate))
+    generator = generator_t(sensitivity, crossover/t_max, nonlinearity, limiter_t(saturation, saturation_rate))
     #output = output_raw_accel_t(generator)
     output = output_libinput_t(generator)
 
