@@ -66,6 +66,15 @@ class curve_smoothstep_t:
     def __init__(self, crossover, _):
         self.crossover = crossover
 
+# smooth ramp
+class curve_softplus_t:
+    def __call__(self, x):
+        return self.crossover*math.log(1 + math.exp(self.nonlinearity*(x - self.crossover)))/math.log(2)
+
+    def __init__(self, crossover, nonlinearity):
+        self.crossover = crossover
+        self.nonlinearity = nonlinearity
+
 # soft limits using tanh
 class limiter_t:
     def apply(self, t):
@@ -175,6 +184,7 @@ def create_arg_parser():
         "logistic": curve_logistic_t,
         "smooth": curve_smooth_t,
         "smoothstep": curve_smoothstep_t,
+        "softplus": curve_softplus_t,
     }
     impl.add_argument('-x', '--curve', choices=curve_choices.keys(), default="exponential")
 
