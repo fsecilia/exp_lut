@@ -63,6 +63,15 @@ class curve_softplus_t:
         self.crossover = crossover
         self.nonlinearity = nonlinearity
 
+# log diff, limited by tanh: tanh(n*ln(x)) + 1
+class curve_log_diff_t:
+    def __call__(self, x):
+        return self.crossover*(math.tanh(self.nonlinearity*math.log(x/self.crossover)) + 1)
+
+    def __init__(self, crossover, nonlinearity):
+        self.crossover = crossover
+        self.nonlinearity = nonlinearity
+
 # combines a curve with a limiter and sensitivity
 class generator_t:
     def __call__(self, x):
@@ -187,6 +196,7 @@ def create_arg_parser():
         "smooth": curve_smooth_t,
         "smoothstep": curve_smoothstep_t,
         "softplus": curve_softplus_t,
+        "log_diff": curve_log_diff_t,
     }
     impl.add_argument('-x', '--curve', choices=curve_choices.keys(), default="exponential")
 
