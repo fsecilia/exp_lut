@@ -183,7 +183,7 @@ class output_libinput_t:
         y *= x
 
         # there is some scalar conversion I'm missing because it is too fast. probably dpi
-        y /= 4
+        y /= 2
 
         print(f"{y:.24f} ", end="")
 
