@@ -51,6 +51,21 @@ class curve_smooth_t:
         self.crossover = crossover
         self.nonlinearity = nonlinearity
 
+# cubic hermite
+class curve_smoothstep_t:
+    def __call__(self, x):
+        if x >= 2*self.crossover: return 2*self.crossover
+
+        d = 1.0/(2*self.crossover)
+        u = d*x
+        v = d*self.crossover
+        uu = u*u
+        vv = v*v
+        return self.crossover*(3*uu - 2*uu*u)/(3*vv - 2*vv*v)
+
+    def __init__(self, crossover, _):
+        self.crossover = crossover
+
 # soft limits using tanh
 class limiter_t:
     def apply(self, t):
@@ -159,6 +174,7 @@ def create_arg_parser():
         "exponential": curve_exponential_t,
         "logistic": curve_logistic_t,
         "smooth": curve_smooth_t,
+        "smoothstep": curve_smoothstep_t,
     }
     impl.add_argument('-x', '--curve', choices=curve_choices.keys(), default="exponential")
 
