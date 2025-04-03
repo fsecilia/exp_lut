@@ -3,7 +3,7 @@
 import math
 import argparse
 
-default_crossover = 25
+default_crossover = 12
 default_nonlinearity = 1.0
 default_sensitivity = 1.0
 default_limit = 5.0
@@ -11,18 +11,35 @@ default_limit_rate = 1.0
 
 table_size = 50
 
-# generates c(e^nx - 1)/(e^nc - 1) and applies a limiter
+# generates curve and applies a limiter
 class generator_t:
     def generate(self, x):
-        unlimited = (math.exp(self.nonlinearity*x) - 1)/(math.exp(self.nonlinearity*self.crossover) - 1)
+        unlimited = self.curve(x)
         limited = self.sensitivity*self.limiter.apply(unlimited)
         return limited
 
-    def __init__(self, sensitivity, crossover, nonlinearity, limiter):
+    def __init__(self, curve, limiter, sensitivity):
+        self.curve = curve
+        self.limiter = limiter
         self.sensitivity = sensitivity
+
+# c(e^nx - 1)/(e^nc - 1)
+class curve_exponential_t:
+    def __call__(self, x):
+        return (math.exp(self.nonlinearity*x) - 1)/(math.exp(self.nonlinearity*self.crossover) - 1)
+
+    def __init__(self, crossover, nonlinearity):
         self.crossover = crossover
         self.nonlinearity = nonlinearity
-        self.limiter = limiter
+
+# The logistic function has slope 1 at the crossover.
+class curve_logistic_t:
+    def __call__(self, x):
+        return 2*self.crossover/(1 + math.exp(-self.nonlinearity*(x - self.crossover)))
+
+    def __init__(self, crossover, nonlinearity):
+        self.crossover = crossover
+        self.nonlinearity = nonlinearity
 
 # soft limits using tanh
 class limiter_t:
@@ -45,6 +62,8 @@ class sampler_curvature_t:
     def sample_location(self, t):
         # The curve should have more samples where the sensitivity changes most. For now, just oversample small t.
         # The change in sensitivity is the derivative of the whole limited function, which is difficult.
+        # Alternatively, we can find where the limiter comes on and sample 2 points there, and calc the rest using
+        # just the derivative of the curve, which is much simpler.
         return (math.exp(math.pow(t, sampler_curvature_t.sample_density)) - 1)/(math.exp(1) - 1)
 
     def __init__(self, num_samples):
@@ -126,20 +145,28 @@ def create_arg_parser():
     impl.add_argument('-l', '--limit', type=float, default=default_limit)
     impl.add_argument('-r', '--limit_rate', type=float, default=default_limit_rate)
 
+    curve_choices={
+        "exponential": curve_exponential_t,
+        "logistic": curve_logistic_t,
+    }
+    impl.add_argument('-x', '--curve', choices=curve_choices.keys(), default="exponential")
+
     format_choices={
        "raw_accel": output_raw_accel_t,
        "libinput": output_libinput_t,
     }
-    default_format_choice = "raw_accel"
-    impl.add_argument('-f', '--format', choices=format_choices.keys(), default=default_format_choice)
+    impl.add_argument('-f', '--format', choices=format_choices.keys(), default="raw_accel")
 
     result = impl.parse_args()
+
+    result.curve_t = curve_choices[result.curve]
     result.output_t = format_choices[result.format]
+
     return result
 
 args = create_arg_parser()
-app_t().run(args.output_t(generator_t(args.sensitivity, args.crossover/table_size, args.nonlinearity,
-    limiter_t(args.limit, args.limit_rate))))
+app_t().run(args.output_t(generator_t(args.curve_t(args.crossover/table_size, args.nonlinearity), limiter_t(args.limit, args.limit_rate), args.sensitivity)))
+
 
 '''
 9/16 anisotropy: x*9/16 = x*0.5625, xy*16/9 = 1.77777777777778
