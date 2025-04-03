@@ -72,6 +72,27 @@ class curve_log_diff_t:
         self.crossover = crossover
         self.nonlinearity = nonlinearity
 
+# log diff, exponentiated: e^tanh(n*ln(x))
+class curve_log_diff_exponentiated_t:
+    def __call__(self, x):
+        return self.crossover*(math.exp(math.tanh(self.nonlinearity*math.log(x/self.crossover)) + 1) - 1)/(math.exp(1) - 1)
+
+    def __init__(self, crossover, nonlinearity):
+        self.crossover = crossover
+        self.nonlinearity = nonlinearity
+
+# product of exponential_t and log_diff_t
+# this needs steepness and individual contributions
+class curve_product_exponential_log_diff_t:
+    def __call__(self, x):
+        exp = (math.exp(self.nonlinearity*x) - 1)/(math.exp(self.nonlinearity*self.crossover) - 1)
+        log_diff = math.tanh(self.nonlinearity*math.log(x/self.crossover)) + 1
+        return exp*log_diff
+
+    def __init__(self, crossover, nonlinearity):
+        self.crossover = crossover
+        self.nonlinearity = nonlinearity
+
 # combines a curve with a limiter and sensitivity
 class generator_t:
     def __call__(self, x):
@@ -197,6 +218,8 @@ def create_arg_parser():
         "smoothstep": curve_smoothstep_t,
         "softplus": curve_softplus_t,
         "log_diff": curve_log_diff_t,
+        "log_diff_exponentiated": curve_log_diff_exponentiated_t,
+        "product_exponential_log_diff": curve_product_exponential_log_diff_t,
     }
     impl.add_argument('-x', '--curve', choices=curve_choices.keys(), default="exponential")
 
