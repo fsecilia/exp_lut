@@ -125,8 +125,10 @@ class output_raw_accel_t:
         x = self.sampler.sample_location(t)
         y = self.generator.generate(x)
 
-        x *= table_size
         y *= x
+
+        y *= table_size
+        x *= table_size
         print(f"{x:.24f},{y:.24f};")
 
     def __init__(self, generator):
