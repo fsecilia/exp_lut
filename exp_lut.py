@@ -41,6 +41,16 @@ class curve_logistic_t:
         self.crossover = crossover
         self.nonlinearity = nonlinearity
 
+# non-analytic smooth transition function
+class curve_smooth_t:
+    def __call__(self, x):
+        offset = x - self.crossover
+        return self.crossover*(math.tanh(self.nonlinearity*offset/(1 + offset*offset)) + 1)
+
+    def __init__(self, crossover, nonlinearity):
+        self.crossover = crossover
+        self.nonlinearity = nonlinearity
+
 # soft limits using tanh
 class limiter_t:
     def apply(self, t):
@@ -148,6 +158,7 @@ def create_arg_parser():
     curve_choices={
         "exponential": curve_exponential_t,
         "logistic": curve_logistic_t,
+        "smooth": curve_smooth_t,
     }
     impl.add_argument('-x', '--curve', choices=curve_choices.keys(), default="exponential")
 
