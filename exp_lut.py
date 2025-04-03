@@ -11,18 +11,6 @@ default_limit_rate = 1.0
 
 table_size = 50
 
-# generates curve and applies a limiter
-class generator_t:
-    def generate(self, x):
-        unlimited = self.curve(x)
-        limited = self.sensitivity*self.limiter.apply(unlimited)
-        return limited
-
-    def __init__(self, curve, limiter, sensitivity):
-        self.curve = curve
-        self.limiter = limiter
-        self.sensitivity = sensitivity
-
 # c(e^nx - 1)/(e^nc - 1)
 class curve_exponential_t:
     def __call__(self, x):
@@ -32,7 +20,7 @@ class curve_exponential_t:
         self.crossover = crossover
         self.nonlinearity = nonlinearity
 
-# The logistic function has slope 1 at the crossover.
+# The logistic function has slope 1 at the crossover and is symmetric.
 class curve_logistic_t:
     def __call__(self, x):
         return 2*self.crossover/(1 + math.exp(-self.nonlinearity*(x - self.crossover)))
@@ -51,7 +39,7 @@ class curve_smooth_t:
         self.crossover = crossover
         self.nonlinearity = nonlinearity
 
-# cubic hermite
+# symmetric cubic hermite: 3x^2 - 2x^3
 class curve_smoothstep_t:
     def __call__(self, x):
         if x >= 2*self.crossover: return 2*self.crossover
@@ -66,7 +54,7 @@ class curve_smoothstep_t:
     def __init__(self, crossover, _):
         self.crossover = crossover
 
-# smooth ramp
+# smooth ramp: log(1 + e^x)
 class curve_softplus_t:
     def __call__(self, x):
         return self.crossover*math.log(1 + math.exp(self.nonlinearity*(x - self.crossover)))/math.log(2)
@@ -75,9 +63,21 @@ class curve_softplus_t:
         self.crossover = crossover
         self.nonlinearity = nonlinearity
 
+# combines a curve with a limiter and sensitivity
+class generator_t:
+    def __call__(self, x):
+        unlimited = self.curve(x)
+        limited = self.sensitivity*self.limiter(unlimited)
+        return limited
+
+    def __init__(self, curve, limiter, sensitivity):
+        self.curve = curve
+        self.limiter = limiter
+        self.sensitivity = sensitivity
+
 # soft limits using tanh
 class limiter_t:
-    def apply(self, t):
+    def __call__(self, t):
         normalized = t/self.limit
         compressed = math.pow(normalized, self.rate)
         limited = math.tanh(compressed)
@@ -93,7 +93,7 @@ class limiter_t:
 class sampler_curvature_t:
     sample_density = 1.5
 
-    def sample_location(self, t):
+    def __call__(self, t):
         # The curve should have more samples where the sensitivity changes most. For now, just oversample small t.
         # The change in sensitivity is the derivative of the whole limited function, which is difficult.
         # Alternatively, we can find where the limiter comes on and sample 2 points there, and calc the rest using
@@ -105,7 +105,7 @@ class sampler_curvature_t:
 
 # chooses sample locations uniformly
 class sampler_uniform_t:
-    def sample_location(self, t):
+    def __call__(self, t):
         return t*self.dt
 
     def __init__(self, dt):
@@ -122,8 +122,8 @@ class output_raw_accel_t:
         pass
 
     def __call__(self, t):
-        x = self.sampler.sample_location(t)
-        y = self.generator.generate(x)
+        x = self.sampler(t)
+        y = self.generator(x)
 
         y *= x
 
@@ -147,8 +147,8 @@ class output_libinput_t:
         print("")
 
     def __call__(self, t):
-        x = self.sampler.sample_location(t)
-        y = self.generator.generate(x)
+        x = self.sampler(t)
+        y = self.generator(x)
 
         y *= x
 
