@@ -20,10 +20,10 @@ class curve_exponential_t:
         self.crossover = crossover
         self.nonlinearity = nonlinearity
 
-# The logistic function has slope 1 at the crossover and is symmetric.
+# The logistic function has slope 1 at the crossover and is symmetric: 1/(1 + e^-((n/c)(x - c)))
 class curve_logistic_t:
     def __call__(self, x):
-        return 2*self.crossover/(1 + math.exp(-self.nonlinearity*(x - self.crossover)))
+        return 2*self.crossover/(1 + math.exp(-(self.nonlinearity/self.crossover)*(x - self.crossover)))
 
     def __init__(self, crossover, nonlinearity):
         self.crossover = crossover
