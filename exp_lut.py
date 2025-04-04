@@ -3,7 +3,7 @@
 import math
 import argparse
 
-default_crossover = 13
+default_crossover = 18
 default_nonlinearity = 1.0
 default_sensitivity = 1.0
 default_limit = 5.0
@@ -92,6 +92,13 @@ class curve_product_exponential_log_diff_t:
     def __init__(self, crossover, nonlinearity):
         self.crossover = crossover
         self.nonlinearity = nonlinearity
+
+class curve_linear_t:
+    def __call__(self, _):
+        return 1
+
+    def __init__(self, crossover, nonlinearity):
+        pass
 
 # combines a curve with a limiter and sensitivity
 class generator_t:
@@ -220,6 +227,7 @@ def create_arg_parser():
         "log_diff": curve_log_diff_t,
         "log_diff_exponentiated": curve_log_diff_exponentiated_t,
         "product_exponential_log_diff": curve_product_exponential_log_diff_t,
+        "linear": curve_linear_t,
     }
     impl.add_argument('-x', '--curve', choices=curve_choices.keys(), default="exponential")
 
