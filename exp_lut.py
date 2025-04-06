@@ -3,8 +3,8 @@
 import math
 import argparse
 
-default_crossover = 10
-default_nonlinearity = 5.0
+default_crossover = 20
+default_nonlinearity = 4.5
 default_sensitivity = 1.0
 default_limit = 5.0
 default_limit_rate = 1.0
