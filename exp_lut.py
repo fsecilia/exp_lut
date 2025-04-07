@@ -191,7 +191,7 @@ class output_raw_accel_t:
 # libinput supports up to 64 uniformly-spaced samples, but this includes 0.
 class output_libinput_t:
     num_samples = 63
-    motion_step = table_size/(num_samples + 1)
+    motion_step = (table_size/(num_samples + 1))/2
 
     def on_begin(self):
         print("0 ", end="")
@@ -203,10 +203,8 @@ class output_libinput_t:
         x = self.sampler(t)
         y = self.generator(x)
 
+        y *= output_libinput_t.motion_step
         y *= x
-
-        # there is some scalar conversion I'm missing because it is too fast. probably dpi
-        y /= 2
 
         print(f"{y:.24f} ", end="")
 
@@ -274,4 +272,3 @@ app_t().run(args.output_t(generator_t(args.curve_t(args.crossover/table_size, ar
 (ln((e^old_crossover - 1)/relative_scale + 1))
 = ln(e^old_crossover + relative_scale - 1) - ln(relative_scale)
 '''
-
