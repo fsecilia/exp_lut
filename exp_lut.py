@@ -20,7 +20,7 @@ table_size = 50
 # ce^(m(x - c))(e^nx - 1)/(e^nc - 1)
 class curve_exponential_t:
     def __call__(self, x):
-        return math.exp(self.magnitude*(x - self.crossover))*(math.exp(self.nonlinearity*x) - 1)/(math.exp(self.nonlinearity*self.crossover) - 1)
+        return math.exp(self.magnitude*math.log(self.crossover)*(x - self.crossover))*(math.exp(self.nonlinearity*x) - 1)/(math.exp(self.nonlinearity*self.crossover) - 1)
 
     def __init__(self, crossover, nonlinearity, magnitude):
         self.crossover = crossover
