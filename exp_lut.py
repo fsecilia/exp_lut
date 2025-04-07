@@ -3,10 +3,10 @@
 import math
 import argparse
 
-default_crossover = 20
+default_crossover = 9
 default_nonlinearity = 2
 default_magnitude = 1
-default_sensitivity = 1
+default_sensitivity = 0.5625
 default_limit = 4.0
 default_limit_rate = 4.0
 
@@ -264,11 +264,154 @@ args = create_arg_parser()
 app_t().run(args.output_t(generator_t(args.curve_t(args.crossover/table_size, args.nonlinearity, args.magnitude),
     limiter_t(args.limit/args.sensitivity, args.limit_rate), args.sensitivity)))
 
+
 '''
 9/16 anisotropy: x*9/16 = x*0.5625, xy*16/9 = 1.77777777777778
 (3/4)(9/16) = (27/64) = (3/4)^2 anisotropy: x*27/64 = x*0.421875, xy*16/9 = 2.3703703703703703703703703703704
 (4/3)(9/16) = (28/48) = 7/12 anisotropy: x*7/12 = x*0.58333333333333333333333333333333, xy*12/7 = 1.7142857142857142857142857142857
 
+When using anisotropy, you can scale x down or y up.
+If you scale x down, you lose resolution and the last half of the table in x.
+If you scale y up, you xlose the last half of the table in y. Scaling up also magnifies the current resolution, making it effectively coarser.
+
+After the end of the curve, the line through the last two points is extrapolated on the velocity graph. If this line is not (very) horizontal, the graph becomes linear and changes tangent, just when you are going fastest. Anisotropic y goes bonkers and is still scaled by the total velocity, scaling the bonkers. The transition to this must be smooth, or it quickly forms kinks on the gain graph.
+
+The same curve produced by changing sensitivity can be reproduced with sensitivity=1 and a clever choice of crossover.
+crossover = 38.54813549926318, sensitivity = 16, misses limiter entirely
+crossover = 12.75, sensitivity = 4, hits limiter of 5@70 before 45
+crossover = 3.504998498211076, sensitivity = 1, hits 5@70 before 15
+
+Using sensitivity = 4 keeps a hint of the limiter. Is it too high to be useful?
+Could we just keep sensitivity = 1 and raise the limiter?
+
+With no limiter, you can produce the same curve by varying sensitivity or crossover, but as knobs they do different
+things. Sensitivity is a final scalar applied after limiting to the numerator. Crossover is applied before limiting,
+and it is summed in the denominator, so it isn't as direct of a control over the final output scale as sensitivity is.
+To scale the final output by 4, you just increase the sensitivity by 4. To increase the final output scale using
+crossover requires solving the denominator. They affect the output in related ways, but they control different
+intuitive things.
+
+First, we need the inverse:
+f(x) = (e^nx - 1)/(e^nc - 1)
+x = f(f^-1(x))
+= (e^(nf^-1(x)) - 1)/(e^nc - 1)
+x(e^nc - 1) = e^(nf^-1(x)) - 1
+x(e^nc - 1) + 1 = e^(nf^-1(x))
+ln(x(e^nc - 1) + 1) = nf^-1(x)
+...f^-1(x) = ln(x(e^nc - 1) + 1)/n
+
+Check your work:
+x ?= f(f^-1(x))
+= f(ln(x(e^nc - 1) + 1)/n)
+= (e^(n(ln(x(e^nc - 1) + 1)/n)) - 1)/(e^nc - 1)
+= (e^(ln(x(e^nc - 1) + 1)) - 1)/(e^nc - 1)
+= (x(e^nc - 1) + 1 - 1)/(e^nc - 1)
+= x(e^nc - 1)/(e^nc - 1)
+= x
+
+Adding to crossover... hmm, this is a change in x, not a change in crossover.
+f(x + u) = vf(x)
+f^-1(f(x + u)) = f^-1(vf(x))
+x + u = f^-1(v(e^nx - 1)/(e^nc - 1))
+u = ln((v(e^nx - 1)/(e^nc - 1))(e^nc - 1) + 1)/n - x
+= ln(v(e^nx - 1) + 1)/n - x
+
+First, we need the inverse with respect to c:
+g(c) = (e^nx - 1)/(e^nc - 1)
+c = g(g^-1(c))
+= (e^nx - 1)/(e^(n(g^-1(c))) - 1)
+c(e^(n(g^-1(c))) - 1) = e^nx - 1
+e^(n(g^-1(c))) - 1 = (e^nx - 1)/c
+e^(n(g^-1(c))) = (e^nx - 1)/c + 1
+n(g^-1(c)) = ln((e^nx - 1)/c + 1)
+...g^-1(c) = ln((e^nx - 1)/c + 1)/n
+
+Check your work (more quickly this time):
+...g^-1(c) =
+g(g^-1(c)) = (e^nx - 1)/(e^(n(ln((e^nx - 1)/c + 1)/n)) - 1)
+c = (e^nx - 1)/(e^(n(ln((e^nx - 1)/c + 1)/n)) - 1)
+c(e^(n(ln((e^nx - 1)/c + 1)/n)) - 1) = (e^nx - 1)
+e^ln((e^nx - 1)/c + 1) - 1 = (e^nx - 1)/c
+(e^nx - 1)/c + 1 - 1 = (e^nx - 1)/c
+(e^nx - 1)/c = (e^nx - 1)/c
+
+Adding to crossover is equivalent to scaling by a... something:
+g(c + u) = vg(c)
+v = g(c + u)/g(c)
+= ((e^nx - 1)/(e^(n(c + u)) - 1))/((e^nx - 1)/(e^nc - 1))
+= (e^nx - 1)(e^nc - 1)/((e^nx - 1)(e^(n(c + u)) - 1))
+= (e^nc - 1)/(e^(n(c + u)) - 1)
+
+Well, we know g(c) is just a quotient, so if we can scale the denominator by itself, it scales all of g(c) by the
+inverse.
+d(c) = e^nc - 1
+d(c + u) = d(c)/v
+e^(n(c + u)) - 1 = (e^(nc) - 1)/v
+ve^(n(c + u)) - 1 = e^(nc) - 1
+ve^(n(c + u)) = e^(nc)
+v = e^(nc)/e^(n(c + u))
+= e^(nc - n(c + u))
+= e^(nc - nc - nu)
+... v = e^(-nu)
+
+
+d(c + u) = d(c)/v
+d(c + u) = d(c)/e^(-nu)
+d(c + u) = d(c)e^(nu)
+(e^n(c + u) - 1) = (e^nc - 1)e^(nu)
+(e^nc)(e^nu) - 1 = (e^nc)(e^nu) - (e^nu)
+-1 = -(e^nu)
+1 = e^nu
+
 (ln((e^old_crossover - 1)/relative_scale + 1))
 = ln(e^old_crossover + relative_scale - 1) - ln(relative_scale)
+
+f(new_crossover) = (ln((e^old_crossover - 1)/relative_scale + 1))
+= ln(e^old_crossover + relative_scale - 1) - ln(relative_scale)
+
+in (e^tx - 1), t is literally the slope at x=0
+in (e^nx - 1)/(e^nc - 1), the slope is more complicated, but related
+
+c(e^nx - 1)/(e^nc - 1)
+= ce^nx/(e^nc - 1) - c/(e^nc - 1)
+
+So ths slope should be something like cn/(e^nc - 1).
+
+We need to solve for the derivative.
+f(x) = c(e^nx - 1)/(e^nc - 1)
+g(x) = l*tanh((f(x)/l)^r)^(1/r)
+= l*tanh(((c(e^nx - 1)/(e^nc - 1))/l)^r)^(1/r)
+
+tanh(x) = (e^x - e^-x)/(e^x + e^-x)
+= (e^2x - 1)/(e^2x + 1)
+
+tanh((f(x)/l))^r) =
+= (e^(2((f(x)/l))^r)) - 1)/(e^(2((f(x)/l))^r)) + 1)
+= (e^(2(f(x)^r)(l^-r)) - 1)/(e^(2(f(x)^r)(l^-r)) + 1)
+= (e^(2((c(e^nx - 1)/(e^nc - 1))^r)(l^-r)) - 1)/(e^(2((c(e^nx - 1)/(e^nc - 1))^r)(l^-r)) + 1)
+
+((ce^nx - c)/(e^nc - 1))^r
+(ce^nx/(e^nc - 1) - c/(e^nc - 1))^r
+
+wolfram suggests
+d/dx g(x) = d/dx(l tanh(((c (e^(n x) - 1))/((e^(n c) - 1) l))^r)^(1/r)) = (l n e^(n x) ((c (e^(n x) - 1))/(l (e^(c n) - 1)))^r tanh^(1/r - 1)(((c (e^(n x) - 1))/(l (e^(c n) - 1)))^r) sech^2(((c (e^(n x) - 1))/(l (e^(c n) - 1)))^r))/(e^(n x) - 1)
+= d/dx l*tanh((c(e^nx - 1))/(l(e^nc - 1)))^r)^(1/r)
+
+u = ((c(e^nx - 1))/(l(e^nc - 1)))^r
+d/dx = u(nl)(e^nx)(tanh(u)^(1/r - 1))(sech(u)^2)/(e^nx - 1)
+
+ln(1 + e^(xc + 3.6)) = c
+
+f(x) = ln(1 + e^(mx + b))
+f(c) = c
+x = ln(1 + e^(mx + b))
+e^c = 1 + e^(mc + b)
+e^c = 1 + e^(mc + b)
+1 = e^-c + e^(mc + b - c)
+
+
+0.957244774752303073661608,0.041294567771928088195654;
+1.013958681726748967122376,0.046438254824904247330952;
+1.071842851067287494259972,0.052012371042401514542597;
+
 '''
