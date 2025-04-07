@@ -4,7 +4,7 @@ import math
 import argparse
 
 default_crossover = 20
-default_nonlinearity = 1
+default_nonlinearity = 2
 default_magnitude = 1
 default_sensitivity = 1
 default_limit = 4.0
