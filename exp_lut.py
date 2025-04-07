@@ -293,7 +293,82 @@ To scale the final output by 4, you just increase the sensitivity by 4. To incre
 crossover requires solving the denominator. They affect the output in related ways, but they control different
 intuitive things.
 
-new_crossover = ln((e^old_crossover - 1)/relative_scale + 1)
+First, we need the inverse:
+f(x) = (e^nx - 1)/(e^nc - 1)
+x = f(f^-1(x))
+= (e^(nf^-1(x)) - 1)/(e^nc - 1)
+x(e^nc - 1) = e^(nf^-1(x)) - 1
+x(e^nc - 1) + 1 = e^(nf^-1(x))
+ln(x(e^nc - 1) + 1) = nf^-1(x)
+...f^-1(x) = ln(x(e^nc - 1) + 1)/n
+
+Check your work:
+x ?= f(f^-1(x))
+= f(ln(x(e^nc - 1) + 1)/n)
+= (e^(n(ln(x(e^nc - 1) + 1)/n)) - 1)/(e^nc - 1)
+= (e^(ln(x(e^nc - 1) + 1)) - 1)/(e^nc - 1)
+= (x(e^nc - 1) + 1 - 1)/(e^nc - 1)
+= x(e^nc - 1)/(e^nc - 1)
+= x
+
+Adding to crossover... hmm, this is a change in x, not a change in crossover.
+f(x + u) = vf(x)
+f^-1(f(x + u)) = f^-1(vf(x))
+x + u = f^-1(v(e^nx - 1)/(e^nc - 1))
+u = ln((v(e^nx - 1)/(e^nc - 1))(e^nc - 1) + 1)/n - x
+= ln(v(e^nx - 1) + 1)/n - x
+
+First, we need the inverse with respect to c:
+g(c) = (e^nx - 1)/(e^nc - 1)
+c = g(g^-1(c))
+= (e^nx - 1)/(e^(n(g^-1(c))) - 1)
+c(e^(n(g^-1(c))) - 1) = e^nx - 1
+e^(n(g^-1(c))) - 1 = (e^nx - 1)/c
+e^(n(g^-1(c))) = (e^nx - 1)/c + 1
+n(g^-1(c)) = ln((e^nx - 1)/c + 1)
+...g^-1(c) = ln((e^nx - 1)/c + 1)/n
+
+Check your work (more quickly this time):
+...g^-1(c) =
+g(g^-1(c)) = (e^nx - 1)/(e^(n(ln((e^nx - 1)/c + 1)/n)) - 1)
+c = (e^nx - 1)/(e^(n(ln((e^nx - 1)/c + 1)/n)) - 1)
+c(e^(n(ln((e^nx - 1)/c + 1)/n)) - 1) = (e^nx - 1)
+e^ln((e^nx - 1)/c + 1) - 1 = (e^nx - 1)/c
+(e^nx - 1)/c + 1 - 1 = (e^nx - 1)/c
+(e^nx - 1)/c = (e^nx - 1)/c
+
+Adding to crossover is equivalent to scaling by a... something:
+g(c + u) = vg(c)
+v = g(c + u)/g(c)
+= ((e^nx - 1)/(e^(n(c + u)) - 1))/((e^nx - 1)/(e^nc - 1))
+= (e^nx - 1)(e^nc - 1)/((e^nx - 1)(e^(n(c + u)) - 1))
+= (e^nc - 1)/(e^(n(c + u)) - 1)
+
+Well, we know g(c) is just a quotient, so if we can scale the denominator by itself, it scales all of g(c) by the
+inverse.
+d(c) = e^nc - 1
+d(c + u) = d(c)/v
+e^(n(c + u)) - 1 = (e^(nc) - 1)/v
+ve^(n(c + u)) - 1 = e^(nc) - 1
+ve^(n(c + u)) = e^(nc)
+v = e^(nc)/e^(n(c + u))
+= e^(nc - n(c + u))
+= e^(nc - nc - nu)
+... v = e^(-nu)
+
+
+d(c + u) = d(c)/v
+d(c + u) = d(c)/e^(-nu)
+d(c + u) = d(c)e^(nu)
+(e^n(c + u) - 1) = (e^nc - 1)e^(nu)
+(e^nc)(e^nu) - 1 = (e^nc)(e^nu) - (e^nu)
+-1 = -(e^nu)
+1 = e^nu
+
+(ln((e^old_crossover - 1)/relative_scale + 1))
+= ln(e^old_crossover + relative_scale - 1) - ln(relative_scale)
+
+f(new_crossover) = (ln((e^old_crossover - 1)/relative_scale + 1))
 = ln(e^old_crossover + relative_scale - 1) - ln(relative_scale)
 
 in (e^tx - 1), t is literally the slope at x=0
@@ -326,4 +401,20 @@ d/dx g(x) = d/dx(l tanh(((c (e^(n x) - 1))/((e^(n c) - 1) l))^r)^(1/r)) = (l n e
 
 u = ((c(e^nx - 1))/(l(e^nc - 1)))^r
 d/dx = u(nl)(e^nx)(tanh(u)^(1/r - 1))(sech(u)^2)/(e^nx - 1)
+
+ln(1 + e^(xc + 3.6)) = c
+
+f(x) = ln(1 + e^(mx + b))
+f(c) = c
+x = ln(1 + e^(mx + b))
+e^c = 1 + e^(mc + b)
+e^c = 1 + e^(mc + b)
+1 = e^-c + e^(mc + b - c)
+
+
+0.957244774752303073661608,0.041294567771928088195654;
+1.013958681726748967122376,0.046438254824904247330952;
+1.071842851067287494259972,0.052012371042401514542597;
+
 '''
+
