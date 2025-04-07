@@ -3,20 +3,36 @@
 import math
 import argparse
 
-default_crossover = 20
-default_nonlinearity = 4.5
-default_sensitivity = 1.0
-default_limit = 5.0
-default_limit_rate = 1.0
+default_crossover = 9
+default_nonlinearity = 2
+default_magnitude = 1
+default_sensitivity = 0.5625
+default_limit = 4.0
+default_limit_rate = 4.0
 
 table_size = 50
 
-# c(e^nx - 1)/(e^nc - 1)
+# exponential curve:
+# - shifted to go through (0, 0)
+# - scaled to go through (c, c)
+# - exponentiated by n to flatten entry and sharpen transition
+# - scaled exponentially by m relative to (c, c) to apply exponentiation gradually relative to linear
+# ce^(m(x - c))(e^nx - 1)/(e^nc - 1)
 class curve_exponential_t:
     def __call__(self, x):
-        return (math.exp(self.nonlinearity*x) - 1)/(math.exp(self.nonlinearity*self.crossover) - 1)
+        return math.exp(self.magnitude*(x - self.crossover))*(math.exp(self.nonlinearity*x) - 1)/(math.exp(self.nonlinearity*self.crossover) - 1)
 
-    def __init__(self, crossover, nonlinearity):
+    def __init__(self, crossover, nonlinearity, magnitude):
+        self.crossover = crossover
+        self.nonlinearity = nonlinearity
+        self.magnitude = magnitude
+
+# Similar to curve_exponential_t, but scaled by softplus instead of the exponential term, log(1 + e^x).
+class curve_exponential_by_softplus_t:
+    def __call__(self, x):
+        return math.log(1 + math.exp(x))*(math.exp(self.nonlinearity*x) - 1)/(math.exp(self.nonlinearity*self.crossover) - 1)
+
+    def __init__(self, crossover, nonlinearity, _):
         self.crossover = crossover
         self.nonlinearity = nonlinearity
 
@@ -25,7 +41,7 @@ class curve_logistic_t:
     def __call__(self, x):
         return 2*self.crossover/(1 + math.exp(-(self.nonlinearity/self.crossover)*(x - self.crossover)))
 
-    def __init__(self, crossover, nonlinearity):
+    def __init__(self, crossover, nonlinearity, _):
         self.crossover = crossover
         self.nonlinearity = nonlinearity
 
@@ -35,7 +51,7 @@ class curve_smooth_t:
         offset = x - self.crossover
         return self.crossover*(math.tanh(self.nonlinearity*offset/(1 + offset*offset)) + 1)
 
-    def __init__(self, crossover, nonlinearity):
+    def __init__(self, crossover, nonlinearity, _):
         self.crossover = crossover
         self.nonlinearity = nonlinearity
 
@@ -51,7 +67,7 @@ class curve_smoothstep_t:
         vv = v*v
         return self.crossover*(3*uu - 2*uu*u)/(3*vv - 2*vv*v)
 
-    def __init__(self, crossover, _):
+    def __init__(self, crossover, _nonlinearity, _magnitude):
         self.crossover = crossover
 
 # smooth ramp: log(1 + e^x)
@@ -59,7 +75,7 @@ class curve_softplus_t:
     def __call__(self, x):
         return self.crossover*math.log(1 + math.exp(self.nonlinearity*(x - self.crossover)))/math.log(2)
 
-    def __init__(self, crossover, nonlinearity):
+    def __init__(self, crossover, nonlinearity, _):
         self.crossover = crossover
         self.nonlinearity = nonlinearity
 
@@ -68,7 +84,7 @@ class curve_log_diff_t:
     def __call__(self, x):
         return self.crossover*(math.tanh(self.nonlinearity*math.log(x/self.crossover)) + 1)
 
-    def __init__(self, crossover, nonlinearity):
+    def __init__(self, crossover, nonlinearity, _):
         self.crossover = crossover
         self.nonlinearity = nonlinearity
 
@@ -77,7 +93,7 @@ class curve_log_diff_exponentiated_t:
     def __call__(self, x):
         return self.crossover*(math.exp(math.tanh(self.nonlinearity*math.log(x/self.crossover)) + 1) - 1)/(math.exp(1) - 1)
 
-    def __init__(self, crossover, nonlinearity):
+    def __init__(self, crossover, nonlinearity, _):
         self.crossover = crossover
         self.nonlinearity = nonlinearity
 
@@ -89,7 +105,7 @@ class curve_product_exponential_log_diff_t:
         log_diff = math.tanh(self.nonlinearity*math.log(x/self.crossover)) + 1
         return exp*log_diff
 
-    def __init__(self, crossover, nonlinearity):
+    def __init__(self, crossover, nonlinearity, _):
         self.crossover = crossover
         self.nonlinearity = nonlinearity
 
@@ -97,7 +113,7 @@ class curve_linear_t:
     def __call__(self, _):
         return 1
 
-    def __init__(self, crossover, nonlinearity):
+    def __init__(self, crossover, nonlinearity, _):
         pass
 
 # combines a curve with a limiter and sensitivity
@@ -214,12 +230,14 @@ def create_arg_parser():
         description="Generates a lookup table for exponential input curves.")
     impl.add_argument('-c', '--crossover', type=float, default=default_crossover)
     impl.add_argument('-n', '--nonlinearity', type=float, default=default_nonlinearity)
+    impl.add_argument('-m', '--magnitude', type=float, default=default_magnitude)
     impl.add_argument('-s', '--sensitivity', type=float, default=default_sensitivity)
     impl.add_argument('-l', '--limit', type=float, default=default_limit)
     impl.add_argument('-r', '--limit_rate', type=float, default=default_limit_rate)
 
     curve_choices={
         "exponential": curve_exponential_t,
+        "exponential_by_softplus": curve_exponential_by_softplus_t,
         "logistic": curve_logistic_t,
         "smooth": curve_smooth_t,
         "smoothstep": curve_smoothstep_t,
@@ -245,13 +263,20 @@ def create_arg_parser():
     return result
 
 args = create_arg_parser()
-app_t().run(args.output_t(generator_t(args.curve_t(args.crossover/table_size, args.nonlinearity), limiter_t(args.limit, args.limit_rate), args.sensitivity)))
+app_t().run(args.output_t(generator_t(args.curve_t(args.crossover/table_size, args.nonlinearity, args.magnitude),
+    limiter_t(args.limit/args.sensitivity, args.limit_rate), args.sensitivity)))
 
 
 '''
 9/16 anisotropy: x*9/16 = x*0.5625, xy*16/9 = 1.77777777777778
 (3/4)(9/16) = (27/64) = (3/4)^2 anisotropy: x*27/64 = x*0.421875, xy*16/9 = 2.3703703703703703703703703703704
 (4/3)(9/16) = (28/48) = 7/12 anisotropy: x*7/12 = x*0.58333333333333333333333333333333, xy*12/7 = 1.7142857142857142857142857142857
+
+When using anisotropy, you can scale x down or y up.
+If you scale x down, you lose resolution and the last half of the table in x.
+If you scale y up, you xlose the last half of the table in y. Scaling up also magnifies the current resolution, making it effectively coarser.
+
+After the end of the curve, the line through the last two points is extrapolated on the velocity graph. If this line is not (very) horizontal, the graph becomes linear and changes tangent, just when you are going fastest. Anisotropic y goes bonkers and is still scaled by the total velocity, scaling the bonkers. The transition to this must be smooth, or it quickly forms kinks on the gain graph.
 
 The same curve produced by changing sensitivity can be reproduced with sensitivity=1 and a clever choice of crossover.
 crossover = 38.54813549926318, sensitivity = 16, misses limiter entirely
