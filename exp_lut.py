@@ -3,12 +3,12 @@
 import math
 import argparse
 
-default_crossover = 20
+default_crossover = 10
 default_nonlinearity = 2
-default_magnitude = 1
+default_magnitude = 0.5
 default_sensitivity = 1
-default_limit = 4.0
-default_limit_rate = 4.0
+default_limit = 10.0
+default_limit_rate = 1.0
 
 table_size = 50
 
