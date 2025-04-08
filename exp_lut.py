@@ -3,12 +3,12 @@
 import math
 import argparse
 
-default_crossover = 9
-default_nonlinearity = 2
+default_crossover = 8.3
+default_nonlinearity = 3.8
 default_magnitude = 1
-default_sensitivity = 0.5625
-default_limit = 4.0
-default_limit_rate = 4.0
+default_sensitivity = 1
+default_limit = 7.0
+default_limit_rate = 1.0
 
 table_size = 50
 
@@ -408,10 +408,4 @@ x = ln(1 + e^(mx + b))
 e^c = 1 + e^(mc + b)
 e^c = 1 + e^(mc + b)
 1 = e^-c + e^(mc + b - c)
-
-
-0.957244774752303073661608,0.041294567771928088195654;
-1.013958681726748967122376,0.046438254824904247330952;
-1.071842851067287494259972,0.052012371042401514542597;
-
 '''
