@@ -400,7 +400,7 @@ d/dx g(x) = d/dx(l tanh(((c (e^(n x) - 1))/((e^(n c) - 1) l))^r)^(1/r)) = (l n e
 u = ((c(e^nx - 1))/(l(e^nc - 1)))^r
 d/dx = u(nl)(e^nx)(tanh(u)^(1/r - 1))(sech(u)^2)/(e^nx - 1)
 
-ln(1 + e^(xc + 3.6)) = c
+
 
 f(x) = ln(1 + e^(mx + b))
 f(c) = c
@@ -408,4 +408,15 @@ x = ln(1 + e^(mx + b))
 e^c = 1 + e^(mc + b)
 e^c = 1 + e^(mc + b)
 1 = e^-c + e^(mc + b - c)
+
+f(x) = ce^(m(x - c))(e^nx - 1)/(e^nc - 1)
+f(x + d) = ce^(m((x + d) - c))(e^(n(x + d)) - 1)/(e^nc - 1)
+= ce^(m(x - c) + md)(e^(nx + nd) - 1)/(e^nc - 1)
+= e^(md)ce^(m(x - c))(e^(nd)e^(nx) - 1)/(e^nc - 1)
+= e^(md)ce^(m(x - c))e^(nd)(e^(nx) - 1/e^(nd))/(e^nc - 1)
+= e^(md)e^(nd)ce^(m(x - c))(e^(nx) - 1/e^(nd))/(e^nc - 1)
+
+This is close to a power law, but the 1 in the numerator is affected, becoming 1/e^(nd).
+
+
 '''
