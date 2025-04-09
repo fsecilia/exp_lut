@@ -3,14 +3,14 @@
 import math
 import argparse
 
-default_crossover = 8.3
-default_nonlinearity = 3.8
-default_magnitude = -1.7957674906255938191612700193035
-default_sensitivity = 3.3814424928542726157295532724884
-default_limit = 5.5
-default_limit_rate = 1.0
-
 table_size = 50
+
+default_crossover = 8.3
+default_nonlinearity = 0.7
+default_magnitude = 0
+default_sensitivity = 3.38
+default_limit = 4
+default_limit_rate = 1.0
 
 # exponential curve:
 # - shifted to go through (0, 0)
