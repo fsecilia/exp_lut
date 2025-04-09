@@ -6,9 +6,9 @@ import argparse
 table_size = 50
 
 default_crossover = 8.3
-default_nonlinearity = 0.82
+default_nonlinearity = 0.7
 default_magnitude = 0
-default_sensitivity = 6.8
+default_sensitivity = 3.38
 default_limit = 4
 default_limit_rate = 1.0
 
