@@ -6,9 +6,9 @@ import argparse
 table_size = 50
 
 default_crossover = 8.3
-default_nonlinearity = 0.7
+default_nonlinearity = 0.82
 default_magnitude = 0
-default_sensitivity = 3.38
+default_sensitivity = 6.8
 default_limit = 4
 default_limit_rate = 1.0
 
@@ -29,18 +29,18 @@ class curve_exponential_t:
 
 class curve_synchronous_t:
     def __call__(self, x):
-        l = (self.gamma/math.log(self.motivity))*(math.log(x) - math.log(self.crossover))
+        sign = -1 if x < self.crossover else 1
+        l = sign*(self.gamma/math.log(self.motivity))*(math.log(x) - math.log(self.crossover))
         k = 0.5/self.smooth
-        p = math.pow(math.fabs(l), k)
-        h = math.pow(math.tanh(p), 1/k)
-        if x < self.crossover: h = -h
-        return self.crossover*math.pow(self.motivity, h)
+        p = math.pow(l, k)
+        h = sign*math.pow((math.tanh(p) + 1)/2, 1/k)
+        return self.crossover*(math.pow(self.motivity, h) - 1)/(math.pow(self.motivity, 1/2) - 1)
 
     def __init__(self, crossover, gamma, _):
         self.crossover = crossover
         self.gamma = gamma
-        self.motivity = 25
-        self.smooth = .088
+        self.motivity = 5
+        self.smooth = .27
 
 # Similar to curve_exponential_t, but scaled by softplus instead of the exponential term, log(1 + e^x).
 class curve_exponential_by_softplus_t:
@@ -144,7 +144,7 @@ class generator_t:
         self.sensitivity = sensitivity
 
 # soft limits using tanh
-class limiter_t:
+class limiter_tanh_t:
     def __call__(self, t):
         normalized = t/self.limit
         compressed = math.pow(normalized, self.rate)
@@ -156,6 +156,13 @@ class limiter_t:
     def __init__(self, limit, rate):
         self.limit = limit
         self.rate = rate
+
+class limiter_null_t:
+    def __call__(self, t):
+        return t
+
+    def __init__(self, _limit, _rate):
+        pass
 
 # chooses sample locations based on curvature
 class sampler_curvature_t:
@@ -273,12 +280,13 @@ def create_arg_parser():
 
     result.curve_t = curve_choices[result.curve]
     result.output_t = format_choices[result.format]
+    result.limiter_t = limiter_tanh_t if result.curve != "synchronous" else limiter_null_t
 
     return result
 
 args = create_arg_parser()
 app_t().run(args.output_t(generator_t(args.curve_t(args.crossover/table_size, args.nonlinearity, args.magnitude),
-    limiter_t(args.limit/args.sensitivity, args.limit_rate), args.sensitivity)))
+    args.limiter_t(args.limit/args.sensitivity, args.limit_rate), args.sensitivity)))
 
 
 '''
