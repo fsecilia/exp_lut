@@ -5,11 +5,11 @@ import argparse
 
 table_size = 50
 
-default_crossover = 12
+default_crossover = 19.2
 default_nonlinearity = 2
 default_magnitude = 1
-default_sensitivity = 0.75
-default_limit = 10
+default_sensitivity = 1
+default_limit = 8.5
 default_limit_rate = 1.0
 
 class curve_constant_t:
@@ -319,4 +319,3 @@ def create_arg_parser():
 args = create_arg_parser()
 app_t().run(args.output_t(generator_t(args.curve_t(args.crossover/table_size, args.nonlinearity, args.magnitude),
     args.limiter_t(args.limit/args.sensitivity, args.limit_rate), args.sensitivity)))
-
