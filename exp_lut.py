@@ -279,7 +279,7 @@ def create_arg_parser():
 
     result.curve_t = curve_choices[result.curve]
     result.output_t = format_choices[result.format]
-    result.limiter_t = limiter_tanh_t if result.curve != "synchronous" else limiter_null_t
+    result.limiter_t = limiter_tanh_t if result.curve != "exponential_by_softplus" else limiter_null_t
 
     return result
 
