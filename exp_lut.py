@@ -16,11 +16,10 @@ default_limit_rate = 1.0
 # - shifted to go through (0, 0)
 # - scaled to go through (c, c)
 # - exponentiated by n to flatten entry and sharpen transition
-# - scaled exponentially by m relative to (c, c) to apply exponentiation gradually relative to linear
-# ce^(m(x - c))(e^nx - 1)/(e^nc - 1)
+# c(e^nx - 1)/(e^nc - 1)
 class curve_exponential_t:
     def __call__(self, x):
-        return self.crossover*math.exp(self.magnitude*(x - self.crossover))*(math.exp(self.nonlinearity*x) - 1)/(math.exp(self.nonlinearity*self.crossover) - 1)
+        return (math.exp(self.nonlinearity*x) - 1)/(math.exp(self.nonlinearity*self.crossover) - 1)
 
     def __init__(self, crossover, nonlinearity, magnitude):
         self.crossover = crossover
