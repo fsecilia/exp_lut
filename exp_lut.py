@@ -27,6 +27,21 @@ class curve_exponential_t:
         self.nonlinearity = nonlinearity
         self.magnitude = magnitude
 
+class curve_synchronous_t:
+    def __call__(self, x):
+        l = (self.gamma/math.log(self.motivity))*(math.log(x) - math.log(self.crossover))
+        k = 0.5/self.smooth
+        p = math.pow(math.fabs(l), k)
+        h = math.pow(math.tanh(p), 1/k)
+        if x < self.crossover: h = -h
+        return self.crossover*math.pow(self.motivity, h)
+
+    def __init__(self, crossover, gamma, _):
+        self.crossover = crossover
+        self.gamma = gamma
+        self.motivity = 25
+        self.smooth = .088
+
 # Similar to curve_exponential_t, but scaled by softplus instead of the exponential term, log(1 + e^x).
 class curve_exponential_by_softplus_t:
     def __call__(self, x):
@@ -235,6 +250,7 @@ def create_arg_parser():
 
     curve_choices={
         "exponential": curve_exponential_t,
+        "synchronous": curve_synchronous_t,
         "exponential_by_softplus": curve_exponential_by_softplus_t,
         "logistic": curve_logistic_t,
         "smooth": curve_smooth_t,
