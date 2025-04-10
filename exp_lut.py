@@ -5,11 +5,11 @@ import argparse
 
 table_size = 50
 
-default_crossover = 16
-default_nonlinearity = 1
+default_crossover = 8.3
+default_nonlinearity = 15
 default_magnitude = 1
-default_sensitivity = 1
-default_limit = 6.5
+default_sensitivity = 6
+default_limit = 6
 default_limit_rate = 1.0
 
 class curve_constant_t:
@@ -63,6 +63,18 @@ class curve_exponential_by_softplus_t:
         exponential = (math.exp(self.nonlinearity*x) - 1)/(math.exp(self.nonlinearity*self.crossover) - 1)
         softplus = math.log(1 + math.exp(self.magnitude*(x - self.crossover)))/self.magnitude
         return exponential*softplus
+
+    def __init__(self, crossover, nonlinearity, magnitude):
+        self.crossover = crossover
+        self.nonlinearity = nonlinearity
+        self.magnitude = magnitude
+
+# unidentified negative exponential curve: x*(e^(-nx) - 1)/(e^(-nc) - 1)
+# I found this from an older version of the exponential when I accidentaly put in a negative value.
+# The curve is naturally s-shaped, with no initial tangent and it approaches linear(!), but it may be the limiter.
+class curve_negative_exponential_t:
+    def __call__(self, x):
+        return x*(math.exp(-self.nonlinearity*x) - 1)/(math.exp(-self.nonlinearity*self.crossover) - 1)
 
     def __init__(self, crossover, nonlinearity, magnitude):
         self.crossover = crossover
@@ -288,6 +300,7 @@ def create_arg_parser():
         "exponential": curve_exponential_t,
         "exponential_by_power": curve_exponential_by_power_t,
         "exponential_by_softplus": curve_exponential_by_softplus_t,
+        "negative_exponential": curve_negative_exponential_t,
         "softplus": curve_softplus_t,
         "synchronous": curve_synchronous_t,
         "logistic": curve_logistic_t,
