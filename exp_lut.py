@@ -6,10 +6,10 @@ import argparse
 table_size = 50
 
 default_crossover = 16
-default_nonlinearity = 2
+default_nonlinearity = 1
 default_magnitude = 1
 default_sensitivity = 1
-default_limit = 13
+default_limit = 6.5
 default_limit_rate = 1.0
 
 class curve_constant_t:
