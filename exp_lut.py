@@ -5,13 +5,13 @@ import argparse
 
 table_size = 50
 
-default_crossover = 3.2
-default_nonlinearity = 2
+default_crossover = 7
+default_nonlinearity = 4.4
 default_magnitude = 1
-default_sensitivity = 0.19
-default_limit = 20
+default_sensitivity = 0.35
+default_limit = 15
 default_limit_rate = 1.0
-default_curve = "exponential_by_power"
+default_curve = "exponential"
 
 class curve_constant_t:
     def __call__(self, _):
