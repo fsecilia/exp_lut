@@ -11,6 +11,7 @@ default_magnitude = 1
 default_sensitivity = 1
 default_limit = 5
 default_limit_rate = 1.0
+default_curve = "exponential_by_power"
 
 class curve_constant_t:
     def __call__(self, _):
@@ -311,7 +312,7 @@ def create_arg_parser():
         "log_diff_exponentiated": curve_log_diff_exponentiated_t,
         "product_exponential_log_diff": curve_product_exponential_log_diff_t,
     }
-    impl.add_argument('-x', '--curve', choices=curve_choices.keys(), default="exponential_by_power")
+    impl.add_argument('-x', '--curve', choices=curve_choices.keys(), default=default_curve)
 
     format_choices={
        "raw_accel": output_raw_accel_t,
