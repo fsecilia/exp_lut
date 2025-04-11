@@ -62,8 +62,8 @@ class curve_exponential_by_softplus_t:
     def __call__(self, x):
         exponential = math.exp(self.nonlinearity*(x - self.crossover))
 
-        offset = 1.8
-        softplus = (math.log(1 + math.exp(self.magnitude*(x - offset))) - math.log(1 + math.exp(-self.magnitude*offset)))/self.magnitude
+        offset = 1.6
+        softplus = (math.log(1 + math.exp(self.magnitude*offset*(x - 1))) - math.log(1 + math.exp(-self.magnitude*offset)))/self.magnitude
         return exponential*softplus
 
     def __init__(self, crossover, nonlinearity, magnitude):
