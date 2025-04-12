@@ -5,13 +5,13 @@ import argparse
 
 table_size = 50
 
-default_crossover = 3.2
+default_crossover = 2.8
 default_nonlinearity = 2
-default_magnitude = 85
-default_sensitivity = 6
-default_limit = 10
+default_magnitude = 1
+default_sensitivity = 0.10
+default_limit = 12
 default_limit_rate = 1.0
-default_curve = "exponential_by_softplus"
+default_curve = "exponential_by_power"
 
 class curve_constant_t:
     def __call__(self, _):
@@ -62,8 +62,8 @@ class curve_exponential_by_softplus_t:
     def __call__(self, x):
         exponential = math.exp(self.nonlinearity*(x - self.crossover))
 
-        offset = 0.03
-        softplus = math.log(1 + math.exp(self.magnitude*(x - offset)))/self.magnitude
+        offset = 1.6
+        softplus = (math.log(1 + math.exp(self.magnitude*offset*(x - 1))) - math.log(1 + math.exp(-self.magnitude*offset)))/self.magnitude
         return exponential*softplus
 
     def __init__(self, crossover, nonlinearity, magnitude):
