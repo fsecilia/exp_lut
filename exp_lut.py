@@ -6,12 +6,28 @@ import argparse
 table_size = 50
 
 default_crossover = 2.8
-default_nonlinearity = 2
-default_magnitude = 1
-default_sensitivity = 0.10
-default_limit = 12
-default_limit_rate = 1.0
-default_curve = "exponential_by_power"
+default_nonlinearity = 2.5
+default_magnitude = 2
+default_sensitivity = 0.25
+default_limit = 10
+default_limit_rate = 0.4
+default_curve = "exponential_by_logistic_log"
+
+# This is the weighted product of two functions, the exponential and the logistic, both centered on the crossover.
+# The weights themselves are from another instance of the logistic, and they smoothly transition from the logistic
+# to the exponential, with equal weights at the crossover:
+# (e^(n(x - c))^t(tanh(m*ln(x/c)/2) + 1)^(1 - t), t = (tanh((x/c - 1)/2) + 1)/2
+class curve_exponential_by_logistic_log_t:
+    def __call__(self, x):
+        exp = math.exp(self.nonlinearity*(x - self.crossover))
+        logistic = (math.tanh(self.magnitude*math.log(x/self.crossover)/2) + 1)/2
+        crossfade = (math.exp(1)*math.tanh(x/self.crossover - 1) + 1)/2
+        return math.pow(exp, crossfade)*math.pow(logistic, 1 - crossfade)
+
+    def __init__(self, crossover, nonlinearity, magnitude):
+        self.crossover = crossover
+        self.nonlinearity = nonlinearity
+        self.magnitude = magnitude
 
 class curve_constant_t:
     def __call__(self, _):
@@ -45,7 +61,7 @@ class curve_exponential_t:
         self.nonlinearity = nonlinearity
         self.magnitude = magnitude
 
-# Similar to curve_exponential_t, but scaled by x^m.
+# Similar to curve_exponential_t, but scaled by x^m: x^m(e^(x - c))^n = e^(n(x - c) + m*ln(x))
 class curve_exponential_by_power_t:
     def __call__(self, x):
         exponential = math.exp(self.nonlinearity*(x - self.crossover))
@@ -56,6 +72,7 @@ class curve_exponential_by_power_t:
         self.crossover = crossover
         self.nonlinearity = nonlinearity
         self.magnitude = magnitude
+
 
 # Similar to curve_exponential_t, but scaled by softplus, log(1 + e^mx)/m.
 class curve_exponential_by_softplus_t:
@@ -142,36 +159,6 @@ class curve_smoothstep_t:
 
     def __init__(self, crossover, _nonlinearity, _magnitude):
         self.crossover = crossover
-
-# log diff, limited by tanh: tanh(n*ln(x)) + 1
-class curve_log_diff_t:
-    def __call__(self, x):
-        return self.crossover*(math.tanh(self.nonlinearity*math.log(x/self.crossover)) + 1)
-
-    def __init__(self, crossover, nonlinearity, _):
-        self.crossover = crossover
-        self.nonlinearity = nonlinearity
-
-# log diff, exponentiated: e^tanh(n*ln(x))
-class curve_log_diff_exponentiated_t:
-    def __call__(self, x):
-        return self.crossover*(math.exp(math.tanh(self.nonlinearity*math.log(x/self.crossover)) + 1) - 1)/(math.exp(1) - 1)
-
-    def __init__(self, crossover, nonlinearity, _):
-        self.crossover = crossover
-        self.nonlinearity = nonlinearity
-
-# product of exponential_t and log_diff_t
-# this needs steepness and individual contributions
-class curve_product_exponential_log_diff_t:
-    def __call__(self, x):
-        exp = (math.exp(self.nonlinearity*x) - 1)/(math.exp(self.nonlinearity*self.crossover) - 1)
-        log_diff = math.tanh(self.nonlinearity*math.log(x/self.crossover)) + 1
-        return exp*log_diff
-
-    def __init__(self, crossover, nonlinearity, _):
-        self.crossover = crossover
-        self.nonlinearity = nonlinearity
 
 # combines a curve with a limiter and sensitivity
 class generator_t:
@@ -310,9 +297,7 @@ def create_arg_parser():
         "logistic": curve_logistic_t,
         "smooth": curve_smooth_t,
         "smoothstep": curve_smoothstep_t,
-        "log_diff": curve_log_diff_t,
-        "log_diff_exponentiated": curve_log_diff_exponentiated_t,
-        "product_exponential_log_diff": curve_product_exponential_log_diff_t,
+        "exponential_by_logistic_log": curve_exponential_by_logistic_log_t,
     }
     impl.add_argument('-x', '--curve', choices=curve_choices.keys(), default=default_curve)
 
