@@ -5,13 +5,23 @@ import argparse
 
 table_size = 50
 
-default_crossover = 10
-default_nonlinearity = 4.85
+default_crossover = 8.3
+default_nonlinearity = 6
 default_magnitude = 1
-default_sensitivity = 0.425
-default_limit = 10
-default_limit_rate = 0.42
+default_sensitivity = 6
+default_limit = 12
+default_limit_rate = 0.22
 default_curve = "exponential"
+
+# exponential curve: e^(n(x - c))
+class curve_exponential_t:
+    def __call__(self, x):
+        return self.crossover*math.exp(self.nonlinearity*(x - self.crossover))
+
+    def __init__(self, crossover, nonlinearity, magnitude):
+        self.crossover = crossover
+        self.nonlinearity = nonlinearity
+        self.magnitude = magnitude
 
 # This is the weighted product of two functions, the exponential and the logistic, both centered on the crossover.
 # The weights themselves are from another instance of the logistic, and they smoothly transition from the logistic
@@ -48,16 +58,6 @@ class curve_power_t:
 
     def __init__(self, crossover, _, magnitude):
         self.crossover = crossover
-        self.magnitude = magnitude
-
-# exponential curve: e^(n(x - c))
-class curve_exponential_t:
-    def __call__(self, x):
-        return math.exp(self.nonlinearity*(x - self.crossover))
-
-    def __init__(self, crossover, nonlinearity, magnitude):
-        self.crossover = crossover
-        self.nonlinearity = nonlinearity
         self.magnitude = magnitude
 
 # Similar to curve_exponential_t, but scaled by x^m: x^m(e^(x - c))^n = e^(n(x - c) + m*ln(x))
@@ -163,8 +163,8 @@ class curve_smoothstep_t:
 class generator_t:
     def __call__(self, x):
         unlimited = self.curve(x)
-        limited = self.sensitivity*self.limiter(unlimited)
-        return limited
+        limited = self.limiter(unlimited)
+        return self.sensitivity*limited
 
     def __init__(self, curve, limiter, sensitivity):
         self.curve = curve
