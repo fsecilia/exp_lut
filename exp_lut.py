@@ -194,7 +194,7 @@ class limiter_null_t:
 
 # chooses sample locations based on curvature
 class sampler_curvature_t:
-    sample_density = 1.5
+    sample_density = 2.0
 
     def __call__(self, t):
         # The curve should have more samples where the sensitivity changes most. For now, just oversample small t.
