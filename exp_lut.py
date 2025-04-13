@@ -7,11 +7,24 @@ table_size = 50
 
 default_crossover = 8.3
 default_nonlinearity = 9.5
-default_magnitude = 1
+default_magnitude = default_nonlinearity
 default_sensitivity = 30
 default_limit = 12
 default_limit_rate = 0.1
-default_curve = "exponential"
+default_curve = "horizontal_into_exponential"
+
+# crossfades a horizontal line into the exponential
+class curve_horizontal_into_exponential_t:
+    def __call__(self, x):
+        exp = math.exp(self.nonlinearity*(x - self.crossover))
+        crossfade = (math.tanh(self.magnitude*x) + 1)/2
+        height = math.exp(-self.nonlinearity*self.crossover)
+        return self.crossover*math.pow(height, 1 - crossfade)*math.pow(exp, crossfade)
+
+    def __init__(self, crossover, nonlinearity, magnitude):
+        self.crossover = crossover
+        self.nonlinearity = nonlinearity
+        self.magnitude = magnitude
 
 # exponential curve: ce^(n(x - c))
 class curve_exponential_t:
@@ -297,6 +310,7 @@ def create_arg_parser():
         "smooth": curve_smooth_t,
         "smoothstep": curve_smoothstep_t,
         "exponential_by_logistic_log": curve_exponential_by_logistic_log_t,
+        "horizontal_into_exponential": curve_horizontal_into_exponential_t,
     }
     impl.add_argument('-x', '--curve', choices=curve_choices.keys(), default=default_curve)
 
