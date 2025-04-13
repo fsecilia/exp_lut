@@ -6,14 +6,14 @@ import argparse
 table_size = 50
 
 default_crossover = 8.3
-default_nonlinearity = 6
+default_nonlinearity = 9.5
 default_magnitude = 1
-default_sensitivity = 6
+default_sensitivity = 30
 default_limit = 12
-default_limit_rate = 0.22
+default_limit_rate = 0.1
 default_curve = "exponential"
 
-# exponential curve: e^(n(x - c))
+# exponential curve: ce^(n(x - c))
 class curve_exponential_t:
     def __call__(self, x):
         return self.crossover*math.exp(self.nonlinearity*(x - self.crossover))
