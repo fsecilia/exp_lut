@@ -5,23 +5,22 @@ import argparse
 
 table_size = 50
 
-default_crossover = 2.8
-default_nonlinearity = 2.5
+default_crossover = 5
+default_nonlinearity = 4.25
 default_magnitude = 2
-default_sensitivity = 0.25
+default_sensitivity = 0.8
 default_limit = 10
-default_limit_rate = 0.4
+default_limit_rate = 0.42
 default_curve = "exponential_by_logistic_log"
 
 # This is the weighted product of two functions, the exponential and the logistic, both centered on the crossover.
 # The weights themselves are from another instance of the logistic, and they smoothly transition from the logistic
-# to the exponential, with equal weights at the crossover:
-# (e^(n(x - c))^t(tanh(m*ln(x/c)/2) + 1)^(1 - t), t = (tanh((x/c - 1)/2) + 1)/2
+# to the exponential, with equal weights at the crossover.
 class curve_exponential_by_logistic_log_t:
     def __call__(self, x):
-        exp = math.exp(self.nonlinearity*(x - self.crossover))
         logistic = (math.tanh(self.magnitude*math.log(x/self.crossover)/2) + 1)/2
-        crossfade = (math.exp(1)*math.tanh(x/self.crossover - 1) + 1)/2
+        exp = math.exp(self.nonlinearity*(x - self.crossover))/2
+        crossfade = (math.tanh((x/self.crossover - 1)/2) + 1)/2
         return math.pow(exp, crossfade)*math.pow(logistic, 1 - crossfade)
 
     def __init__(self, crossover, nonlinearity, magnitude):
