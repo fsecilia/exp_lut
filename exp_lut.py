@@ -28,10 +28,10 @@ class curve_exponential_t:
 # to the exponential, with equal weights at the crossover.
 class curve_exponential_by_logistic_log_t:
     def __call__(self, x):
-        logistic = math.tanh(self.magnitude*math.log(x/self.crossover)) + 1
-        exp = math.exp(self.nonlinearity*(x - self.crossover))/2
-        crossfade = (math.tanh((x/self.crossover - 1)/2) + 1)/2
-        return self.crossover*math.pow(exp, crossfade)*math.pow(logistic, 1 - crossfade)
+        exp = math.exp(self.nonlinearity*(x - self.crossover))
+        logistic = math.tanh(self.nonlinearity*math.log(x/(2*self.crossover))/2) + 1
+        crossfade = (math.tanh(self.magnitude*x) + 1)/2
+        return self.crossover*math.pow(logistic, 1 - crossfade)*math.pow(exp, crossfade)
 
     def __init__(self, crossover, nonlinearity, magnitude):
         self.crossover = crossover
