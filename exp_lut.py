@@ -5,10 +5,10 @@ import argparse
 
 table_size = 50
 
-default_crossover = 1
-default_nonlinearity = 4.2
+default_crossover = 10
+default_nonlinearity = 4.85
 default_magnitude = 1
-default_sensitivity = 0.18
+default_sensitivity = 0.425
 default_limit = 10
 default_limit_rate = 0.42
 default_curve = "exponential"
