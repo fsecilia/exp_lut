@@ -5,13 +5,13 @@ import argparse
 
 table_size = 50
 
-default_crossover = 5
-default_nonlinearity = 4.25
-default_magnitude = 2
-default_sensitivity = 0.8
+default_crossover = 1
+default_nonlinearity = 4.2
+default_magnitude = 1
+default_sensitivity = 0.18
 default_limit = 10
 default_limit_rate = 0.42
-default_curve = "exponential_by_logistic_log"
+default_curve = "exponential"
 
 # This is the weighted product of two functions, the exponential and the logistic, both centered on the crossover.
 # The weights themselves are from another instance of the logistic, and they smoothly transition from the logistic
