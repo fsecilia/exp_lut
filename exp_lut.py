@@ -13,7 +13,8 @@ default_limit = 8
 default_limit_rate = 10
 default_curve = "exponential"
 
-# exponential curve: e^(n(x - c))
+# exponential curve: ce^(n(x - c))
+# d/dx ce^(n(x - c))) = cne^(n(x - c))
 class curve_exponential_t:
     def __call__(self, x):
         return self.crossover*math.exp(self.nonlinearity*(x - self.crossover))
@@ -80,6 +81,8 @@ class curve_power_t:
         self.magnitude = magnitude
 
 # Similar to curve_exponential_t, but scaled by x^m: x^m(e^(x - c))^n = e^(n(x - c) + m*ln(x))
+# d/dx se^(n(x - a))x^m = sx^(m - 1)e^(n(x - a))(nx + m)
+# d/dx sce^(n(x - c))(x/c)^m = se^(n(x - c))(x/c)^(p - 1)(nx + c)
 class curve_exponential_by_power_t:
     def __call__(self, x):
         exponential = math.exp(self.nonlinearity*(x - self.crossover))
@@ -151,6 +154,20 @@ class curve_logistic_t:
     def __init__(self, crossover, nonlinearity, _):
         self.crossover = crossover
         self.nonlinearity = nonlinearity
+
+# logistic of the log of x/c
+# d/dx c^(1 - m)((x/c)^(-n/c) + 1)^-m = (mn(c^-m)((x/c)^(-n/c) + 1)^-m)/(x((x/c)^(n/c) + 1))
+class curve_logistic__log_t:
+    def __call__(self, x):
+        c = self.crossover
+        n = self.nonlinearity
+        m = self.magnitude
+        return math.pow(c, 1 - m)*math.pow(math.pow(x/c, -n/c) + 1, -m)
+
+    def __init__(self, crossover, nonlinearity, magnitude):
+        self.crossover = crossover
+        self.nonlinearity = nonlinearity
+        self.magnitude = magnitude
 
 # non-analytic smooth transition function
 class curve_smooth_t:
