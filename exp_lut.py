@@ -84,13 +84,12 @@ class curve_exponential_by_power_t:
     def __call__(self, x):
         exponential = math.exp(self.nonlinearity*(x - self.crossover))
         power = math.pow(x, self.magnitude)/math.pow(self.crossover, self.magnitude)
-        return exponential*power
+        return self.crossover*exponential*power
 
     def __init__(self, crossover, nonlinearity, magnitude):
         self.crossover = crossover
         self.nonlinearity = nonlinearity
         self.magnitude = magnitude
-
 
 # Similar to curve_exponential_t, but scaled by softplus, log(1 + e^mx)/m.
 class curve_exponential_by_softplus_t:
