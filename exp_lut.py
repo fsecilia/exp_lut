@@ -8,8 +8,8 @@ table_size = 50
 default_crossover = 8.3
 default_nonlinearity = 5
 default_magnitude = 9
-default_sensitivity = 5.0*0.9
-default_limit = 12
+default_sensitivity = 5.0*0.6
+default_limit = 8
 default_limit_rate = 10
 default_curve = "exponential"
 
