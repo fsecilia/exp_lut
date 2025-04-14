@@ -8,7 +8,7 @@ table_size = 50
 default_crossover = 8.3
 default_nonlinearity = 5
 default_magnitude = 9
-default_sensitivity = 5.0*0.8
+default_sensitivity = 5.0*0.9
 default_limit = 12
 default_limit_rate = 10
 default_curve = "exponential"
@@ -329,7 +329,6 @@ def create_arg_parser():
     result.curve_t = curve_choices[result.curve]
     result.output_t = format_choices[result.format]
 
-    #result.limiter_t = limiter_tanh_t if result.curve != "exponential_by_softplus" else limiter_null_t
     result.limiter_t = limiter_tanh_t
     #result.limiter_t = limiter_null_t
 
