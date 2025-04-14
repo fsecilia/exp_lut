@@ -6,12 +6,12 @@ import argparse
 table_size = 50
 
 default_crossover = 8.3
-default_nonlinearity = 9
+default_nonlinearity = 5
 default_magnitude = 9
-default_sensitivity = 5*5.0*default_nonlinearity
-default_limit = 10
-default_limit_rate = 0.09
-default_curve = "horizontal_into_exponential"
+default_sensitivity = 5.0*0.8
+default_limit = 12
+default_limit_rate = 10
+default_curve = "exponential"
 
 # exponential curve: e^(n(x - c))
 class curve_exponential_t:
