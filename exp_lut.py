@@ -13,7 +13,7 @@ default_limit = 8
 default_limit_rate = 10
 default_curve = "exponential"
 
-# exponential curve: ce^(n(x - c))
+# exponential curve:
 # d/dx ce^(n(x - c))) = cne^(n(x - c))
 class curve_exponential_t:
     def __call__(self, x):
@@ -81,8 +81,9 @@ class curve_power_t:
         self.magnitude = magnitude
 
 # Similar to curve_exponential_t, but scaled by x^m: x^m(e^(x - c))^n = e^(n(x - c) + m*ln(x))
-# d/dx se^(n(x - a))x^m = sx^(m - 1)e^(n(x - a))(nx + m)
-# d/dx sce^(n(x - c))(x/c)^m = se^(n(x - c))(x/c)^(p - 1)(nx + c)
+# d/dx se^(n(x - c))x^m = sx^(m - 1)e^(n(x - c))(nx + m)
+# d/dx sce^(n(x - c))(x/c)^m = se^(n(x - c))(x/c)^(m - 1)(nx + m)
+# d/dx sce^(n(x/c - 1)/c)(x/c)^m = se^(n(x/c - 1))(x/c)^m(cm + nx)/x
 class curve_exponential_by_power_t:
     def __call__(self, x):
         exponential = math.exp(self.nonlinearity*(x - self.crossover))
