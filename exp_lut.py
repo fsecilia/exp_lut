@@ -5,10 +5,11 @@ import argparse
 
 table_size = 50
 
+default_in_game_sensitivity = 1/5
 default_crossover = 8.3
 default_nonlinearity = 5
 default_magnitude = 9
-default_sensitivity = 5.0*0.6
+default_sensitivity = 0.6
 default_limit = 8
 default_limit_rate = 10
 default_curve = "exponential"
@@ -315,6 +316,7 @@ def create_arg_parser():
     impl.add_argument('-n', '--nonlinearity', type=float, default=default_nonlinearity)
     impl.add_argument('-m', '--magnitude', type=float, default=default_magnitude)
     impl.add_argument('-s', '--sensitivity', type=float, default=default_sensitivity)
+    impl.add_argument('-i', '--in-game-sensitivity', type=float, default=default_in_game_sensitivity)
     impl.add_argument('-l', '--limit', type=float, default=default_limit)
     impl.add_argument('-r', '--limit_rate', type=float, default=default_limit_rate)
 
@@ -349,6 +351,8 @@ def create_arg_parser():
 
     result.limiter_t = limiter_tanh_t
     #result.limiter_t = limiter_null_t
+
+    result.sensitivity /= result.in_game_sensitivity
 
     return result
 
