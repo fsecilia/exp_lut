@@ -6,30 +6,36 @@ import argparse
 table_size = 50
 
 default_crossover = 8.3
-default_nonlinearity = 9.5
-default_magnitude = default_nonlinearity
-default_sensitivity = 30
-default_limit = 12
-default_limit_rate = 0.1
+default_nonlinearity = 9
+default_magnitude = 9
+default_sensitivity = 5*5.0*default_nonlinearity
+default_limit = 10
+default_limit_rate = 0.09
 default_curve = "horizontal_into_exponential"
 
-# crossfades a horizontal line into the exponential
-class curve_horizontal_into_exponential_t:
+# exponential curve: e^(n(x - c))
+class curve_exponential_t:
     def __call__(self, x):
-        exp = math.exp(self.nonlinearity*(x - self.crossover))
-        crossfade = (math.tanh(self.magnitude*x) + 1)/2
-        height = math.exp(-self.nonlinearity*self.crossover)
-        return self.crossover*math.pow(height, 1 - crossfade)*math.pow(exp, crossfade)
+        return self.crossover*math.exp(self.nonlinearity*(x - self.crossover))
 
     def __init__(self, crossover, nonlinearity, magnitude):
         self.crossover = crossover
         self.nonlinearity = nonlinearity
         self.magnitude = magnitude
 
-# exponential curve: ce^(n(x - c))
-class curve_exponential_t:
+# crossfades a horizontal line into the exponential
+class curve_horizontal_into_exponential_t:
     def __call__(self, x):
-        return self.crossover*math.exp(self.nonlinearity*(x - self.crossover))
+        # this needs to either be calculated or configured
+        crossfade_offset = -0.25*self.crossover
+
+        # using the y intercept gives a weird ratio between the original curve that doesn't happen with a constant
+        # line_height = self.crossover*math.exp(-self.nonlinearity*self.crossover)
+        line_height = 1e-2
+
+        exp = math.exp(self.nonlinearity*(x - self.crossover))
+        crossfade = (math.tanh((self.magnitude/2)*(x + crossfade_offset)) + 1)/2
+        return self.crossover*math.pow(line_height, 1 - crossfade)*math.pow(exp, crossfade)
 
     def __init__(self, crossover, nonlinearity, magnitude):
         self.crossover = crossover
@@ -207,13 +213,12 @@ class limiter_null_t:
 
 # chooses sample locations based on curvature
 class sampler_curvature_t:
-    sample_density = 2.0
+    sample_density = 1.5
 
     def __call__(self, t):
-        # The curve should have more samples where the sensitivity changes most. For now, just oversample small t.
-        # The change in sensitivity is the derivative of the whole limited function, which is difficult.
-        # Alternatively, we can find where the limiter comes on and sample 2 points there, and calc the rest using
-        # just the derivative of the curve, which is much simpler.
+        # The curve should have more samples where the sensitivity changes most. For now, just oversample small t,
+        # since the information there is more important. The change in sensitivity is the derivative of the whole
+        # function, including limiting, which isn't trivial enough to bother with yet.
         return (math.exp(math.pow(t, sampler_curvature_t.sample_density)) - 1)/(math.exp(1) - 1)
 
     def __init__(self, num_samples):
@@ -242,9 +247,9 @@ class output_raw_accel_t:
         y = self.generator(x)
 
         y *= x
-
         y *= table_size
         x *= table_size
+
         print(f"{x:.24f},{y:.24f};")
 
     def __init__(self, generator):
