@@ -6,13 +6,34 @@ import argparse
 table_size = 50
 
 default_in_game_sensitivity = 1/5
-default_crossover = 8.3
-default_nonlinearity = 5
-default_magnitude = 9
-default_sensitivity = 0.6
+default_crossover = 25
+default_nonlinearity = 1
+default_magnitude = .5
+default_sensitivity = 8/5
 default_limit = 8
 default_limit_rate = 1
-default_curve = "exponential"
+default_curve = "normalized_logistic_log"
+
+# doesn't scale by c arbitrarily
+class curve_normalized_logistic_log_t:
+    def __call__(self, x):
+        c = self.crossover
+        n = self.nonlinearity
+        m = self.magnitude
+
+        p = m
+        q = .5/p
+
+        t = math.log(x/c)
+        k = -1 if t < 0 else 1
+        f = (k*math.pow(math.tanh(math.pow(k*n*t, q)), 1/q) + 1)/2
+
+        return f
+
+    def __init__(self, crossover, nonlinearity, magnitude):
+        self.crossover = crossover
+        self.nonlinearity = nonlinearity
+        self.magnitude = magnitude
 
 # exponential curve:
 # d/dx ce^(n(x - c))) = cne^(n(x - c))
@@ -159,7 +180,7 @@ class curve_logistic_t:
 
 # logistic of the log of x/c
 # d/dx c^(1 - m)((x/c)^(-n/c) + 1)^-m = (mn(c^-m)((x/c)^(-n/c) + 1)^-m)/(x((x/c)^(n/c) + 1))
-class curve_logistic__log_t:
+class curve_logistic_log_t:
     def __call__(self, x):
         c = self.crossover
         n = self.nonlinearity
@@ -333,6 +354,8 @@ def create_arg_parser():
         "softplus": curve_softplus_t,
         "synchronous": curve_synchronous_t,
         "logistic": curve_logistic_t,
+        "logistic_log": curve_logistic_log_t,
+        "normalized_logistic_log": curve_normalized_logistic_log_t,
         "smooth": curve_smooth_t,
         "smoothstep": curve_smoothstep_t,
         "exponential_by_logistic_log": curve_exponential_by_logistic_log_t,
@@ -350,10 +373,7 @@ def create_arg_parser():
 
     result.curve_t = curve_choices[result.curve]
     result.output_t = format_choices[result.format]
-
-    result.limiter_t = limiter_tanh_t
-    #result.limiter_t = limiter_null_t
-
+    result.limiter_t = limiter_null_t if result.curve_t == curve_normalized_logistic_log_t else limiter_tanh_t
     result.sensitivity /= result.in_game_sensitivity
 
     return result
