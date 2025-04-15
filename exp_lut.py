@@ -6,13 +6,24 @@ import argparse
 table_size = 50
 
 default_in_game_sensitivity = 1/5
-default_crossover = 25
-default_nonlinearity = 1
-default_magnitude = .5
-default_sensitivity = 8/5
-default_limit = 8
+default_crossover = 8.3
+default_nonlinearity = 7.2
+default_magnitude = 9
+default_sensitivity = 0.75
+default_limit = 32
 default_limit_rate = 1
-default_curve = "normalized_logistic_log"
+default_curve = "exponential"
+
+# exponential curve:
+# d/dx e^(n(x - c))) = ne^(n(x - c))
+class curve_exponential_t:
+    def __call__(self, x):
+        return math.exp(self.nonlinearity*(x - self.crossover))
+
+    def __init__(self, crossover, nonlinearity, magnitude):
+        self.crossover = crossover
+        self.nonlinearity = nonlinearity
+        self.magnitude = magnitude
 
 # doesn't scale by c arbitrarily
 class curve_normalized_logistic_log_t:
