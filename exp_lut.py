@@ -7,12 +7,31 @@ table_size = 50
 
 default_in_game_sensitivity = 1/5
 default_crossover = 8.3
-default_nonlinearity = 5.2
-default_magnitude = 0.5
-default_sensitivity = 0.5
-default_limit = 32
-default_limit_rate = 10
-default_curve = "exponential_by_logistic"
+default_nonlinearity = 5.8
+default_magnitude = 5
+default_sensitivity = 1
+default_limit = 32*default_in_game_sensitivity
+default_limit_rate = 1
+default_curve = "exponential_by_unit_logistic_log"
+
+class curve_exponential_by_unit_logistic_log_t:
+    def __call__(self, x):
+        exponential = math.exp(self.nonlinearity*(x - self.crossover))
+
+        c = self.crossover
+        m = self.magnitude
+
+        # this can maybe be simplified if we break open tanh. e^log(m(x/c)) is m(x/c)
+        u = math.log(m*(x/c))
+        t = (math.tanh(u) + 1)/2
+        f = c*t
+
+        return exponential*f
+
+    def __init__(self, crossover, nonlinearity, magnitude):
+        self.crossover = crossover
+        self.nonlinearity = nonlinearity
+        self.magnitude = magnitude
 
 # exponential scaled by right half of logistic of the log. similar to by power with m=1, but the linear term tapers
 # so the range above the crossover should deviate little from pure exp
@@ -377,6 +396,7 @@ def create_arg_parser():
         "smoothstep": curve_smoothstep_t,
         "exponential_by_logistic_log": curve_exponential_by_logistic_log_t,
         "horizontal_into_exponential": curve_horizontal_into_exponential_t,
+        "exponential_by_unit_logistic_log": curve_exponential_by_unit_logistic_log_t,
     }
     impl.add_argument('-x', '--curve', choices=curve_choices.keys(), default=default_curve)
 
@@ -392,12 +412,10 @@ def create_arg_parser():
     result.output_t = format_choices[result.format]
 
     result.limiter_t = limiter_null_t if result.curve_t == curve_normalized_logistic_log_t else limiter_tanh_t
-    #result.limiter_t = limiter_null_t
-
-    result.sensitivity /= result.in_game_sensitivity
+    # result.limiter_t = limiter_null_t
 
     return result
 
 args = create_arg_parser()
 app_t().run(args.output_t(generator_t(args.curve_t(args.crossover/table_size, args.nonlinearity, args.magnitude),
-    args.limiter_t(args.limit/args.sensitivity, args.limit_rate), args.sensitivity)))
+    args.limiter_t(args.limit/args.sensitivity, args.limit_rate), args.sensitivity/args.in_game_sensitivity)))
