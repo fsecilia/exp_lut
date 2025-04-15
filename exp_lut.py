@@ -11,7 +11,7 @@ default_nonlinearity = 5
 default_magnitude = 9
 default_sensitivity = 0.6
 default_limit = 8
-default_limit_rate = 10
+default_limit_rate = 1
 default_curve = "exponential"
 
 # exponential curve:
