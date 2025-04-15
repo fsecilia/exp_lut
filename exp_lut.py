@@ -6,16 +6,16 @@ import argparse
 table_size = 50
 
 default_in_game_sensitivity = 1/5
-default_crossover = 2
+default_crossover = 8.3
 default_nonlinearity = 5.2
-default_magnitude = 0.25
-default_sensitivity = 0.1
+default_magnitude = 0.5
+default_sensitivity = 0.5
 default_limit = 32
 default_limit_rate = 10
 default_curve = "exponential_by_logistic"
 
 # exponential scaled by right half of logistic of the log. similar to by power with m=1, but the linear term tapers
-# so the range above the crossover should be relatively pure exp
+# so the range above the crossover should deviate little from pure exp
 class curve_exponential_by_logistic_t:
     def __call__(self, x):
         exponential = math.exp(self.nonlinearity*(x - self.crossover))
