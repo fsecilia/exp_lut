@@ -316,9 +316,11 @@ def create_arg_parser():
     impl.add_argument('-n', '--nonlinearity', type=float, default=default_nonlinearity)
     impl.add_argument('-m', '--magnitude', type=float, default=default_magnitude)
     impl.add_argument('-s', '--sensitivity', type=float, default=default_sensitivity)
-    impl.add_argument('-i', '--in-game-sensitivity', type=float, default=default_in_game_sensitivity)
     impl.add_argument('-l', '--limit', type=float, default=default_limit)
     impl.add_argument('-r', '--limit_rate', type=float, default=default_limit_rate)
+
+    impl.add_argument('-i', '--in-game-sensitivity', type=float, default=default_in_game_sensitivity,
+        help="Multiply in-game sensitivity by this value. Scales final output by the inverse.")
 
     curve_choices={
         "constant": curve_constant_t,
