@@ -6,13 +6,44 @@ import argparse
 table_size = 50
 
 default_in_game_sensitivity = 1/5
-default_crossover = 8.3
-default_nonlinearity = 7.2
-default_magnitude = 9
-default_sensitivity = 0.75
+default_crossover = 2
+default_nonlinearity = 5.2
+default_magnitude = 0.25
+default_sensitivity = 0.1
 default_limit = 32
-default_limit_rate = 1
-default_curve = "exponential"
+default_limit_rate = 10
+default_curve = "exponential_by_logistic"
+
+# exponential scaled by right half of logistic of the log. similar to by power with m=1, but the linear term tapers
+# so the range above the crossover should be relatively pure exp
+class curve_exponential_by_logistic_t:
+    def __call__(self, x):
+        exponential = math.exp(self.nonlinearity*(x - self.crossover))
+
+        unity_scale = 6
+        logistic = 2/(1 + math.exp(-x*unity_scale*self.magnitude/self.crossover)) - 1
+
+        return exponential*logistic
+
+    def __init__(self, crossover, nonlinearity, magnitude):
+        self.crossover = crossover
+        self.nonlinearity = nonlinearity
+        self.magnitude = magnitude
+
+# Similar to curve_exponential_t, but scaled by x^m: x^m(e^(x - c))^n = e^(n(x - c) + m*ln(x))
+# d/dx se^(n(x - c))x^m = sx^(m - 1)e^(n(x - c))(nx + m)
+# d/dx sce^(n(x - c))(x/c)^m = se^(n(x - c))(x/c)^(m - 1)(nx + m)
+# d/dx sce^(n(x/c - 1)/c)(x/c)^m = se^(n(x/c - 1))(x/c)^m(cm + nx)/x
+class curve_exponential_by_power_t:
+    def __call__(self, x):
+        exponential = math.exp(self.nonlinearity*(x - self.crossover))
+        power = math.pow(x, self.magnitude)/math.pow(self.crossover, self.magnitude)
+        return exponential*power
+
+    def __init__(self, crossover, nonlinearity, magnitude):
+        self.crossover = crossover
+        self.nonlinearity = nonlinearity
+        self.magnitude = magnitude
 
 # exponential curve:
 # d/dx e^(n(x - c))) = ne^(n(x - c))
@@ -40,17 +71,6 @@ class curve_normalized_logistic_log_t:
         f = (k*math.pow(math.tanh(math.pow(k*n*t, q)), 1/q) + 1)/2
 
         return f
-
-    def __init__(self, crossover, nonlinearity, magnitude):
-        self.crossover = crossover
-        self.nonlinearity = nonlinearity
-        self.magnitude = magnitude
-
-# exponential curve:
-# d/dx ce^(n(x - c))) = cne^(n(x - c))
-class curve_exponential_t:
-    def __call__(self, x):
-        return self.crossover*math.exp(self.nonlinearity*(x - self.crossover))
 
     def __init__(self, crossover, nonlinearity, magnitude):
         self.crossover = crossover
@@ -111,21 +131,6 @@ class curve_power_t:
 
     def __init__(self, crossover, _, magnitude):
         self.crossover = crossover
-        self.magnitude = magnitude
-
-# Similar to curve_exponential_t, but scaled by x^m: x^m(e^(x - c))^n = e^(n(x - c) + m*ln(x))
-# d/dx se^(n(x - c))x^m = sx^(m - 1)e^(n(x - c))(nx + m)
-# d/dx sce^(n(x - c))(x/c)^m = se^(n(x - c))(x/c)^(m - 1)(nx + m)
-# d/dx sce^(n(x/c - 1)/c)(x/c)^m = se^(n(x/c - 1))(x/c)^m(cm + nx)/x
-class curve_exponential_by_power_t:
-    def __call__(self, x):
-        exponential = math.exp(self.nonlinearity*(x - self.crossover))
-        power = math.pow(x, self.magnitude)/math.pow(self.crossover, self.magnitude)
-        return self.crossover*exponential*power
-
-    def __init__(self, crossover, nonlinearity, magnitude):
-        self.crossover = crossover
-        self.nonlinearity = nonlinearity
         self.magnitude = magnitude
 
 # Similar to curve_exponential_t, but scaled by softplus, log(1 + e^mx)/m.
@@ -361,6 +366,7 @@ def create_arg_parser():
         "exponential": curve_exponential_t,
         "exponential_by_power": curve_exponential_by_power_t,
         "exponential_by_softplus": curve_exponential_by_softplus_t,
+        "exponential_by_logistic": curve_exponential_by_logistic_t,
         "negative_exponential": curve_negative_exponential_t,
         "softplus": curve_softplus_t,
         "synchronous": curve_synchronous_t,
@@ -384,7 +390,10 @@ def create_arg_parser():
 
     result.curve_t = curve_choices[result.curve]
     result.output_t = format_choices[result.format]
+
     result.limiter_t = limiter_null_t if result.curve_t == curve_normalized_logistic_log_t else limiter_tanh_t
+    #result.limiter_t = limiter_null_t
+
     result.sensitivity /= result.in_game_sensitivity
 
     return result
