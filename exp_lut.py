@@ -6,12 +6,12 @@ import argparse
 table_size = 50
 
 default_in_game_sensitivity = 1/5
-default_crossover = 8.3
-default_nonlinearity = 5.8
-default_magnitude = 5
+default_crossover = 8
+default_nonlinearity = 5.2
+default_magnitude = 30
 default_sensitivity = 1
-default_limit = 32*default_in_game_sensitivity
-default_limit_rate = 1
+default_limit = 16*default_in_game_sensitivity
+default_limit_rate = 25
 default_curve = "exponential_by_unit_logistic_log"
 
 class curve_exponential_by_unit_logistic_log_t:
