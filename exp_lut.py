@@ -6,27 +6,19 @@ import argparse
 table_size = 50
 
 default_in_game_sensitivity = 1/5
-default_crossover = 8
-default_nonlinearity = 5.2
-default_magnitude = 30
-default_sensitivity = 1.5
+default_crossover = 4
+default_nonlinearity = 6.5
+default_magnitude = 0.25
+default_sensitivity = 0.18
 default_limit = 16*default_in_game_sensitivity
 default_limit_rate = 25
-default_curve = "exponential_by_unit_logistic_log"
+default_curve = "exponential_at_zero"
 
-class curve_exponential_by_unit_logistic_log_t:
+# exponential, shifted to go through 0 at 0:
+class curve_exponential_at_zero_t:
     def __call__(self, x):
-        exponential = math.exp(self.nonlinearity*(x - self.crossover))
-
-        c = self.crossover
-        m = self.magnitude
-
-        # this can maybe be simplified if we break open tanh. e^log(m(x/c)) is m(x/c)
-        u = math.log(m*(x/c))
-        t = (math.tanh(u) + 1)/2
-        f = c*t
-
-        return exponential*f
+        y0 = math.exp(-self.nonlinearity*self.crossover)
+        return math.exp(self.nonlinearity*(x - self.crossover)) - y0
 
     def __init__(self, crossover, nonlinearity, magnitude):
         self.crossover = crossover
@@ -43,6 +35,25 @@ class curve_exponential_by_logistic_t:
         logistic = 2/(1 + math.exp(-x*unity_scale*self.magnitude/self.crossover)) - 1
 
         return exponential*logistic
+
+    def __init__(self, crossover, nonlinearity, magnitude):
+        self.crossover = crossover
+        self.nonlinearity = nonlinearity
+        self.magnitude = magnitude
+
+class curve_exponential_by_unit_logistic_log_t:
+    def __call__(self, x):
+        exponential = math.exp(self.nonlinearity*(x - self.crossover))
+
+        c = self.crossover
+        m = self.magnitude
+
+        # this can maybe be simplified if we break open tanh. e^log(m(x/c)) is m(x/c)
+        u = math.log(m*(x/c))
+        t = (math.tanh(u) + 1)/2
+        f = c*t
+
+        return exponential*f
 
     def __init__(self, crossover, nonlinearity, magnitude):
         self.crossover = crossover
@@ -397,6 +408,7 @@ def create_arg_parser():
         "exponential_by_logistic_log": curve_exponential_by_logistic_log_t,
         "horizontal_into_exponential": curve_horizontal_into_exponential_t,
         "exponential_by_unit_logistic_log": curve_exponential_by_unit_logistic_log_t,
+        "exponential_at_zero": curve_exponential_at_zero_t,
     }
     impl.add_argument('-x', '--curve', choices=curve_choices.keys(), default=default_curve)
 
