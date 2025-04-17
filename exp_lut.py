@@ -6,13 +6,13 @@ import argparse
 table_size = 50
 
 default_in_game_sensitivity = 1/5
-default_crossover = 25/(math.exp(1) - 1)
-default_nonlinearity = 2
-default_magnitude = 2
-default_sensitivity = 8*default_in_game_sensitivity
+default_crossover = 4
+default_nonlinearity = 5.2
+default_magnitude = 0.25
+default_sensitivity = 0.25
 default_limit = 16*default_in_game_sensitivity
 default_limit_rate = 25
-default_curve = "limited_power_law_log"
+default_curve = "exponential_by_logistic_log"
 
 def logistic(t):
     return (math.tanh(t/2) + 1)/2
@@ -68,7 +68,22 @@ class curve_exponential_by_logistic_t:
         exponential = math.exp(self.nonlinearity*(x - self.crossover))
 
         unity_scale = 6
-        logistic = 2/(1 + math.exp(-x*unity_scale*self.magnitude/self.crossover)) - 1
+        logistic = 2/(1 + math.exp(-unity_scale*self.magnitude*(x/self.crossover))) - 1
+
+        return exponential*logistic
+
+    def __init__(self, crossover, nonlinearity, magnitude):
+        self.crossover = crossover
+        self.nonlinearity = nonlinearity
+        self.magnitude = magnitude
+
+# same as exponential by logistic, but the logistic is taken of the log.
+class curve_exponential_by_logistic_log_t:
+    def __call__(self, x):
+        exponential = math.exp(self.nonlinearity*(x - self.crossover))
+
+        unity_scale = 6
+        logistic = 2/(1 + math.exp(-unity_scale*self.magnitude*math.log(x/self.crossover + 1))) - 1
 
         return exponential*logistic
 
@@ -165,7 +180,7 @@ class curve_horizontal_into_exponential_t:
 # This is the weighted product of two functions, the exponential and the logistic, both centered on the crossover.
 # The weights themselves are from another instance of the logistic, and they smoothly transition from the logistic
 # to the exponential, with equal weights at the crossover.
-class curve_exponential_by_logistic_log_t:
+class curve_exponential_into_logistic_log_t:
     def __call__(self, x):
         exp = math.exp(self.nonlinearity*(x - self.crossover))
         logistic = math.tanh(self.nonlinearity*math.log(x/(2*self.crossover))/2) + 1
@@ -433,6 +448,7 @@ def create_arg_parser():
         "exponential_by_power": curve_exponential_by_power_t,
         "exponential_by_softplus": curve_exponential_by_softplus_t,
         "exponential_by_logistic": curve_exponential_by_logistic_t,
+        "exponential_by_logistic_log": curve_exponential_by_logistic_log_t,
         "negative_exponential": curve_negative_exponential_t,
         "softplus": curve_softplus_t,
         "synchronous": curve_synchronous_t,
@@ -441,7 +457,7 @@ def create_arg_parser():
         "normalized_logistic_log": curve_normalized_logistic_log_t,
         "smooth": curve_smooth_t,
         "smoothstep": curve_smoothstep_t,
-        "exponential_by_logistic_log": curve_exponential_by_logistic_log_t,
+        "exponential_into_logistic_log": curve_exponential_into_logistic_log_t,
         "horizontal_into_exponential": curve_horizontal_into_exponential_t,
         "exponential_by_unit_logistic_log": curve_exponential_by_unit_logistic_log_t,
         "power_law": curve_power_law_t,
