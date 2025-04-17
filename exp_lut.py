@@ -118,7 +118,7 @@ class curve_exponential_by_unit_logistic_log_t:
 class curve_exponential_by_power_t:
     def __call__(self, x):
         exponential = math.exp(self.nonlinearity*(x - self.crossover))
-        power = math.pow(x, self.magnitude)/math.pow(self.crossover, self.magnitude)
+        power = math.pow(x/self.crossover, self.magnitude)
         return exponential*power
 
     def __init__(self, crossover, nonlinearity, magnitude):
