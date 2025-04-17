@@ -7,7 +7,7 @@ table_size = 50
 
 default_in_game_sensitivity = 1/5
 default_crossover = 45
-default_nonlinearity = 2.35
+default_nonlinearity = 2
 default_magnitude = 1
 default_sensitivity = 10*default_in_game_sensitivity
 default_limit = 16*default_in_game_sensitivity
