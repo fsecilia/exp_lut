@@ -71,7 +71,7 @@ class curve_exponential_by_logistic_t:
         exponential = math.exp(self.nonlinearity*(x - self.crossover))
 
         unity_scale = 6
-        logistic = 2/(1 + math.exp(-x*unity_scale*self.magnitude/self.crossover)) - 1
+        logistic = unit_logistic(unity_scale*self.magnitude*(x/self.crossover))
 
         return exponential*logistic
 
@@ -84,15 +84,10 @@ class curve_exponential_by_unit_logistic_log_t:
     def __call__(self, x):
         exponential = math.exp(self.nonlinearity*(x - self.crossover))
 
-        c = self.crossover
-        m = self.magnitude
+        unity_scale = 6
+        logistic = unit_logistic(-unity_scale*self.magnitude*(math.log(x/self.crossover)))
 
-        # this can maybe be simplified if we break open tanh. e^log(m(x/c)) is m(x/c)
-        u = math.log(m*(x/c))
-        t = (math.tanh(u) + 1)/2
-        f = c*t
-
-        return exponential*f
+        return exponential*logistic
 
     def __init__(self, crossover, nonlinearity, magnitude):
         self.crossover = crossover
