@@ -6,13 +6,60 @@ import argparse
 table_size = 50
 
 default_in_game_sensitivity = 1/5
-default_crossover = 4
-default_nonlinearity = 5.2
-default_magnitude = 0.25
-default_sensitivity = 0.25
+default_crossover = 25/(math.exp(1) - 1)
+default_nonlinearity = 2
+default_magnitude = 2
+default_sensitivity = 8*default_in_game_sensitivity
 default_limit = 16*default_in_game_sensitivity
 default_limit_rate = 25
-default_curve = "exponential_by_logistic"
+default_curve = "limited_power_law_log"
+
+def logistic(t):
+    return (math.tanh(t/2) + 1)/2
+
+# (m(x/c))^n
+class curve_power_law_t:
+    def __call__(self, x):
+        return math.pow(x/self.crossover, self.nonlinearity)
+
+    def __init__(self, crossover, nonlinearity, magnitude):
+        self.crossover = crossover
+        self.nonlinearity = nonlinearity
+        self.magnitude = magnitude
+
+# same as power law, but naturally limited in a way that very closely approximates the original power law up until c.
+class curve_limited_power_law_t:
+    limited = True
+
+    def __call__(self, x):
+        return 2*logistic(self.magnitude*math.pow(x/self.crossover, self.nonlinearity)) - 1
+
+    def __init__(self, crossover, nonlinearity, magnitude):
+        self.crossover = crossover
+        self.nonlinearity = nonlinearity
+        self.magnitude = magnitude
+
+# same as power law, but of the log
+class curve_power_law_log_t:
+    def __call__(self, x):
+        return math.pow(self.magnitude*math.log(x/self.crossover + 1), self.nonlinearity)
+
+    def __init__(self, crossover, nonlinearity, magnitude):
+        self.crossover = crossover
+        self.nonlinearity = nonlinearity
+        self.magnitude = magnitude
+
+# same as power law log, but naturally limited
+class curve_limited_power_law_log_t:
+    limited = True
+
+    def __call__(self, x):
+        return 2*logistic(self.magnitude*math.pow(math.log(x/self.crossover + 1), self.nonlinearity)) - 1
+
+    def __init__(self, crossover, nonlinearity, magnitude):
+        self.crossover = crossover
+        self.nonlinearity = nonlinearity
+        self.magnitude = magnitude
 
 # exponential scaled by right half of logistic. similar to by power with m=1, but the linear term tapers
 # so the range above the crossover should deviate little from pure exp
@@ -397,6 +444,10 @@ def create_arg_parser():
         "exponential_by_logistic_log": curve_exponential_by_logistic_log_t,
         "horizontal_into_exponential": curve_horizontal_into_exponential_t,
         "exponential_by_unit_logistic_log": curve_exponential_by_unit_logistic_log_t,
+        "power_law": curve_power_law_t,
+        "limited_power_law": curve_limited_power_law_t,
+        "power_law_log": curve_power_law_log_t,
+        "limited_power_law_log": curve_limited_power_law_log_t,
     }
     impl.add_argument('-x', '--curve', choices=curve_choices.keys(), default=default_curve)
 
@@ -411,8 +462,10 @@ def create_arg_parser():
     result.curve_t = curve_choices[result.curve]
     result.output_t = format_choices[result.format]
 
-    result.limiter_t = limiter_null_t if result.curve_t == curve_normalized_logistic_log_t else limiter_tanh_t
-    # result.limiter_t = limiter_null_t
+    if hasattr(result.curve_t, "limited") and result.curve_t.limited:
+        result.limiter_t = limiter_null_t
+    else:
+        result.limiter_t = limiter_tanh_t
 
     return result
 
