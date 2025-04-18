@@ -6,21 +6,73 @@ import argparse
 table_size = 50
 
 default_in_game_sensitivity = 1/5
-default_crossover = 60
-default_nonlinearity = 2
-default_magnitude = 1
-default_sensitivity = 16*default_in_game_sensitivity
+default_crossover = 8.3
+default_nonlinearity = 2.5
+default_sensitivity = 1*default_in_game_sensitivity
+default_magnitude = 0.1*default_in_game_sensitivity/default_sensitivity
 default_limit = 16*default_in_game_sensitivity
 default_limit_rate = 25
-default_curve = "limited_power_law_log"
+default_curve = "limited_floored_power_law_log"
 
 def logistic(t):
     return (math.tanh(t/2) + 1)/2
 
-def unit_logistic(x):
-    return 2*logistic(2*x) - 1
+def unit_logistic(t):
+    return 2*logistic(2*t) - 1
 
-# (m(x/c))^n
+def taper(t):
+    return t if t < 1 else unit_logistic(t - 1) + 1
+
+# same as power law, but magnitude specifies a min other than 0
+class curve_floored_power_law_t:
+    def __call__(self, x):
+        return self.magnitude + (1 - self.magnitude/2)*math.pow(2, 1 - self.nonlinearity)*math.pow(x/self.crossover, self.nonlinearity)
+
+    def __init__(self, crossover, nonlinearity, magnitude):
+        self.crossover = crossover
+        self.nonlinearity = nonlinearity
+        self.magnitude = magnitude
+
+# same as floored power law, but with a natural limiter
+class curve_limited_floored_power_law_t:
+    limited = True
+
+    def __call__(self, x):
+        tapered = taper(x/self.crossover)
+        return self.magnitude + (1 - self.magnitude/2)*math.pow(2, 1 - self.nonlinearity)*math.pow(tapered, self.nonlinearity)
+
+    def __init__(self, crossover, nonlinearity, magnitude):
+        self.crossover = crossover
+        self.nonlinearity = nonlinearity
+        self.magnitude = magnitude
+
+# same as floored power law, but of the log
+class curve_floored_power_law_log_t:
+    def __call__(self, x):
+        # when taking the log, the crossover moves by this much, so scale it back
+        crossover_scale = math.exp(1) - 1
+        return self.magnitude + (1 - self.magnitude/2)*math.pow(2, 1 - self.nonlinearity)*math.pow(math.log(crossover_scale*x/self.crossover + 1), self.nonlinearity)
+
+    def __init__(self, crossover, nonlinearity, magnitude):
+        self.crossover = crossover
+        self.nonlinearity = nonlinearity
+        self.magnitude = magnitude
+
+# same as floored power law log, but with a natural limiter
+class curve_limited_floored_power_law_log_t:
+    limited = True
+
+    def __call__(self, x):
+        crossover_scale = math.exp(1) - 1
+        tapered = taper(math.log(crossover_scale*x/self.crossover + 1))
+        return self.magnitude + (1 - self.magnitude/2)*math.pow(2, 1 - self.nonlinearity)*math.pow(tapered, self.nonlinearity)
+
+    def __init__(self, crossover, nonlinearity, magnitude):
+        self.crossover = crossover
+        self.nonlinearity = nonlinearity
+        self.magnitude = magnitude
+
+# (m(x/c))^n = ax^n, a = mc^-n
 class curve_power_law_t:
     def __call__(self, x):
         return math.pow(x/self.crossover, self.nonlinearity)
@@ -35,7 +87,7 @@ class curve_limited_power_law_t:
     limited = True
 
     def __call__(self, x):
-        return unit_logistic(2*self.nonlinearity*math.pow(x/self.crossover, self.nonlinearity))
+        return unit_logistic(self.nonlinearity*math.pow(x/self.crossover, self.nonlinearity))
 
     def __init__(self, crossover, nonlinearity, magnitude):
         self.crossover = crossover
@@ -57,7 +109,7 @@ class curve_limited_power_law_log_t:
     limited = True
 
     def __call__(self, x):
-        return unit_logistic(2*self.nonlinearity*math.pow(math.log(x/self.crossover + 1), self.nonlinearity))
+        return unit_logistic(self.nonlinearity*math.pow(math.log(x/self.crossover + 1), self.nonlinearity))
 
     def __init__(self, crossover, nonlinearity, magnitude):
         self.crossover = crossover
@@ -446,6 +498,10 @@ def create_arg_parser():
         "limited_power_law": curve_limited_power_law_t,
         "power_law_log": curve_power_law_log_t,
         "limited_power_law_log": curve_limited_power_law_log_t,
+        "floored_power_law": curve_floored_power_law_t,
+        "limited_floored_power_law": curve_limited_floored_power_law_t,
+        "floored_power_law_log": curve_floored_power_law_log_t,
+        "limited_floored_power_law_log": curve_limited_floored_power_law_log_t,
     }
     impl.add_argument('-x', '--curve', choices=curve_choices.keys(), default=default_curve)
 
