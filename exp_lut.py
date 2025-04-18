@@ -5,11 +5,11 @@ import argparse
 
 table_size = 50
 
-default_in_game_sensitivity = 1/5
+default_in_game_sensitivity = 1
 default_crossover = 12
 default_nonlinearity = 2
 default_sensitivity = 5
-default_magnitude = 0.002
+default_magnitude = 0.01
 default_limit = 4
 default_limit_rate = 8
 default_curve = "limited_floored_power_law_log"
