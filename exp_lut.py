@@ -6,7 +6,7 @@ import argparse
 table_size = 50
 
 default_in_game_sensitivity = 1
-default_crossover = 12
+default_crossover = 10
 default_nonlinearity = 2
 default_sensitivity = 5
 default_magnitude = 0.01
@@ -22,6 +22,28 @@ def unit_logistic(t, r):
 
 def taper(t, r):
     return t if t < 1 else unit_logistic(t - 1, r) + 1
+
+'''
+It's not clear in the literature whether human perception is logrithmic or follows a power law, so I've added both
+a power law curve and a power law curve of the log. Setting n=1 is linear for the power law, and just the log for the
+power law log.
+
+These curves are pure power laws, ax^n. The floored versions are pure when no floor is set. Setting the floor sets the
+initial value, changing the result to m + ax^n. The same result is possible by offsetting x instead, but the terms are
+more complex. Because adding m is equivalent to shifting x, this still feels like a power law.
+
+They feel smooth because the initial tangent is always 0. The limited versions follow the original curve exactly until
+after the crossover, where they start to roll off smoothly. The limit is exactly sensitivity, -s. The rate is still
+controlled by limit rate, -r.
+
+The log version is a*log(x + 1)^n. It feels slower and smoother, but the params are the same.
+
+The purpose of floored versions is to tune how much the mouse sits down when stopping and starting. Lower floors are
+more accurate, but stop dead and feel sluggish to start again. It's most noticable when changing directions. Setting a
+very low floor, on the order of .001 to .01, will pick up the minimum sensitivity. Too little and it will still feel
+sticky and sluggish. Too much and it will feel floaty and inaccurate. The floor is controlled by -m, magnitude. It is
+affected by sensitivity, but maybe shouldn't be.
+'''
 
 # same as power law, but magnitude specifies a min other than 0
 class curve_floored_power_law_t:
