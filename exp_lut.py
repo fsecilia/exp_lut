@@ -5,13 +5,13 @@ import argparse
 
 table_size = 50
 
-default_in_game_sensitivity = 1
-default_crossover = 10
-default_nonlinearity = 2
+default_in_game_sensitivity = 1/5
+default_crossover = 8
+default_nonlinearity = 4
 default_sensitivity = 5
-default_magnitude = 0.01
+default_magnitude = 0.003
 default_limit = 4
-default_limit_rate = 8
+default_limit_rate = 4
 default_curve = "limited_floored_power_law_log"
 
 def logistic(t, r):
