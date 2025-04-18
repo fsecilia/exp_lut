@@ -6,29 +6,29 @@ import argparse
 table_size = 50
 
 default_in_game_sensitivity = 1/5
-default_crossover = 8.3
-default_nonlinearity = 2.5
-default_sensitivity = 1*default_in_game_sensitivity
-default_magnitude = 0.1*default_in_game_sensitivity/default_sensitivity
-default_limit = 16*default_in_game_sensitivity
-default_limit_rate = 25
-default_curve = "limited_floored_power_law_log"
+default_crossover = 15
+default_nonlinearity = 2.2
+default_sensitivity = 5
+default_magnitude = 0.002
+default_limit = 4
+default_limit_rate = 8
+default_curve = "limited_floored_power_law"
 
-def logistic(t):
-    return (math.tanh(t/2) + 1)/2
+def logistic(t, r):
+    return (math.pow(math.tanh(math.pow(t/2, r)), 1/r) + 1)/2
 
-def unit_logistic(t):
-    return 2*logistic(2*t) - 1
+def unit_logistic(t, r):
+    return 2*logistic(2*t, r) - 1
 
-def taper(t):
-    return t if t < 1 else unit_logistic(t - 1) + 1
+def taper(t, r):
+    return t if t < 1 else unit_logistic(t - 1, r) + 1
 
 # same as power law, but magnitude specifies a min other than 0
 class curve_floored_power_law_t:
     def __call__(self, x):
-        return self.magnitude + (1 - self.magnitude/2)*math.pow(2, 1 - self.nonlinearity)*math.pow(x/self.crossover, self.nonlinearity)
+        return self.magnitude + (1 - self.magnitude)*math.pow(2, -self.nonlinearity)*math.pow(x/self.crossover, self.nonlinearity)
 
-    def __init__(self, crossover, nonlinearity, magnitude):
+    def __init__(self, crossover, nonlinearity, magnitude, _):
         self.crossover = crossover
         self.nonlinearity = nonlinearity
         self.magnitude = magnitude
@@ -38,22 +38,23 @@ class curve_limited_floored_power_law_t:
     limited = True
 
     def __call__(self, x):
-        tapered = taper(x/self.crossover)
-        return self.magnitude + (1 - self.magnitude/2)*math.pow(2, 1 - self.nonlinearity)*math.pow(tapered, self.nonlinearity)
+        tapered = taper(x/self.crossover, self.limit_rate)
+        return self.magnitude + (1 - self.magnitude)*math.pow(2, -self.nonlinearity)*math.pow(tapered, self.nonlinearity)
 
-    def __init__(self, crossover, nonlinearity, magnitude):
+    def __init__(self, crossover, nonlinearity, magnitude, limit_rate):
         self.crossover = crossover
         self.nonlinearity = nonlinearity
         self.magnitude = magnitude
+        self.limit_rate = limit_rate
 
 # same as floored power law, but of the log
 class curve_floored_power_law_log_t:
     def __call__(self, x):
         # when taking the log, the crossover moves by this much, so scale it back
         crossover_scale = math.exp(1) - 1
-        return self.magnitude + (1 - self.magnitude/2)*math.pow(2, 1 - self.nonlinearity)*math.pow(math.log(crossover_scale*x/self.crossover + 1), self.nonlinearity)
+        return self.magnitude + (1 - self.magnitude)*math.pow(2, -self.nonlinearity)*math.pow(math.log(crossover_scale*x/self.crossover + 1), self.nonlinearity)
 
-    def __init__(self, crossover, nonlinearity, magnitude):
+    def __init__(self, crossover, nonlinearity, magnitude, _):
         self.crossover = crossover
         self.nonlinearity = nonlinearity
         self.magnitude = magnitude
@@ -64,20 +65,21 @@ class curve_limited_floored_power_law_log_t:
 
     def __call__(self, x):
         crossover_scale = math.exp(1) - 1
-        tapered = taper(math.log(crossover_scale*x/self.crossover + 1))
-        return self.magnitude + (1 - self.magnitude/2)*math.pow(2, 1 - self.nonlinearity)*math.pow(tapered, self.nonlinearity)
+        tapered = taper(math.log(crossover_scale*x/self.crossover + 1), self.limit_rate)
+        return self.magnitude + (1 - self.magnitude)*math.pow(2, - self.nonlinearity)*math.pow(tapered, self.nonlinearity)
 
-    def __init__(self, crossover, nonlinearity, magnitude):
+    def __init__(self, crossover, nonlinearity, magnitude, limit_rate):
         self.crossover = crossover
         self.nonlinearity = nonlinearity
         self.magnitude = magnitude
+        self.limit_rate = limit_rate
 
 # (m(x/c))^n = ax^n, a = mc^-n
 class curve_power_law_t:
     def __call__(self, x):
         return math.pow(x/self.crossover, self.nonlinearity)
 
-    def __init__(self, crossover, nonlinearity, magnitude):
+    def __init__(self, crossover, nonlinearity, magnitude, _):
         self.crossover = crossover
         self.nonlinearity = nonlinearity
         self.magnitude = magnitude
@@ -87,19 +89,20 @@ class curve_limited_power_law_t:
     limited = True
 
     def __call__(self, x):
-        return unit_logistic(self.nonlinearity*math.pow(x/self.crossover, self.nonlinearity))
+        return unit_logistic(self.nonlinearity*math.pow(x/self.crossover, self.nonlinearity), self.limit_rate)
 
-    def __init__(self, crossover, nonlinearity, magnitude):
+    def __init__(self, crossover, nonlinearity, magnitude, limit_rate):
         self.crossover = crossover
         self.nonlinearity = nonlinearity
         self.magnitude = magnitude
+        self.limit_rate = limit_rate
 
 # same as power law, but of the log
 class curve_power_law_log_t:
     def __call__(self, x):
         return math.pow(math.log(x/self.crossover + 1), self.nonlinearity)
 
-    def __init__(self, crossover, nonlinearity, magnitude):
+    def __init__(self, crossover, nonlinearity, magnitude, _):
         self.crossover = crossover
         self.nonlinearity = nonlinearity
         self.magnitude = magnitude
@@ -109,12 +112,13 @@ class curve_limited_power_law_log_t:
     limited = True
 
     def __call__(self, x):
-        return unit_logistic(self.nonlinearity*math.pow(math.log(x/self.crossover + 1), self.nonlinearity))
+        return unit_logistic(self.nonlinearity*math.pow(math.log(x/self.crossover + 1), self.nonlinearity), self.limit_rate)
 
-    def __init__(self, crossover, nonlinearity, magnitude):
+    def __init__(self, crossover, nonlinearity, magnitude, limit_rate):
         self.crossover = crossover
         self.nonlinearity = nonlinearity
         self.magnitude = magnitude
+        self.limit_rate = limit_rate
 
 # exponential scaled by right half of logistic. similar to by power with m=1, but the linear term tapers
 # so the range above the crossover should deviate little from pure exp
@@ -123,28 +127,30 @@ class curve_exponential_by_logistic_t:
         exponential = math.exp(self.nonlinearity*(x - self.crossover))
 
         unity_scale = 6
-        logistic = unit_logistic(unity_scale*self.magnitude*(x/self.crossover))
+        logistic = unit_logistic(unity_scale*self.magnitude*(x/self.crossover), self.limit_rate)
 
         return exponential*logistic
 
-    def __init__(self, crossover, nonlinearity, magnitude):
+    def __init__(self, crossover, nonlinearity, magnitude, limit_rate):
         self.crossover = crossover
         self.nonlinearity = nonlinearity
         self.magnitude = magnitude
+        self.limit_rate = limit_rate
 
 class curve_exponential_by_unit_logistic_log_t:
     def __call__(self, x):
         exponential = math.exp(self.nonlinearity*(x - self.crossover))
 
         unity_scale = 6
-        logistic = unit_logistic(-unity_scale*self.magnitude*(math.log(x/self.crossover)))
+        logistic = unit_logistic(-unity_scale*self.magnitude*(math.log(x/self.crossover)), self.limit_rate)
 
         return exponential*logistic
 
-    def __init__(self, crossover, nonlinearity, magnitude):
+    def __init__(self, crossover, nonlinearity, magnitude, limit_rate):
         self.crossover = crossover
         self.nonlinearity = nonlinearity
         self.magnitude = magnitude
+        self.limit_rate = limit_rate
 
 # Similar to curve_exponential_t, but scaled by x^m: x^m(e^(x - c))^n = e^(n(x - c) + m*ln(x))
 # d/dx se^(n(x - c))x^m = sx^(m - 1)e^(n(x - c))(nx + m)
@@ -156,7 +162,7 @@ class curve_exponential_by_power_t:
         power = math.pow(x, self.magnitude)/math.pow(self.crossover, self.magnitude)
         return exponential*power
 
-    def __init__(self, crossover, nonlinearity, magnitude):
+    def __init__(self, crossover, nonlinearity, magnitude, _):
         self.crossover = crossover
         self.nonlinearity = nonlinearity
         self.magnitude = magnitude
@@ -167,7 +173,7 @@ class curve_exponential_t:
     def __call__(self, x):
         return math.exp(self.nonlinearity*(x - self.crossover))
 
-    def __init__(self, crossover, nonlinearity, magnitude):
+    def __init__(self, crossover, nonlinearity, magnitude, _):
         self.crossover = crossover
         self.nonlinearity = nonlinearity
         self.magnitude = magnitude
@@ -188,7 +194,7 @@ class curve_normalized_logistic_log_t:
 
         return f
 
-    def __init__(self, crossover, nonlinearity, magnitude):
+    def __init__(self, crossover, nonlinearity, magnitude, _):
         self.crossover = crossover
         self.nonlinearity = nonlinearity
         self.magnitude = magnitude
@@ -207,7 +213,7 @@ class curve_horizontal_into_exponential_t:
         crossfade = (math.tanh((self.magnitude/2)*(x + crossfade_offset)) + 1)/2
         return self.crossover*math.pow(line_height, 1 - crossfade)*math.pow(exp, crossfade)
 
-    def __init__(self, crossover, nonlinearity, magnitude):
+    def __init__(self, crossover, nonlinearity, magnitude, _):
         self.crossover = crossover
         self.nonlinearity = nonlinearity
         self.magnitude = magnitude
@@ -222,7 +228,7 @@ class curve_exponential_by_logistic_log_t:
         crossfade = (math.tanh(self.magnitude*x) + 1)/2
         return self.crossover*math.pow(logistic, 1 - crossfade)*math.pow(exp, crossfade)
 
-    def __init__(self, crossover, nonlinearity, magnitude):
+    def __init__(self, crossover, nonlinearity, magnitude, _):
         self.crossover = crossover
         self.nonlinearity = nonlinearity
         self.magnitude = magnitude
@@ -231,21 +237,21 @@ class curve_constant_t:
     def __call__(self, _):
         return 1
 
-    def __init__(self, crossover, nonlinearity, _):
+    def __init__(self, crossover, nonlinearity, _magnitude, _):
         pass
 
 class curve_linear_t:
     def __call__(self, x):
         return x
 
-    def __init__(self, crossover, nonlinearity, _):
+    def __init__(self, crossover, nonlinearity, _magnitude, _):
         pass
 
 class curve_power_t:
     def __call__(self, x):
         return math.pow(x, self.magnitude)/math.pow(self.crossover, self.magnitude - 1)
 
-    def __init__(self, crossover, _, magnitude):
+    def __init__(self, crossover, _nonlinearity, magnitude, _):
         self.crossover = crossover
         self.magnitude = magnitude
 
@@ -258,7 +264,7 @@ class curve_exponential_by_softplus_t:
         softplus = (math.log(1 + math.exp(self.magnitude*offset*(x - 1))) - math.log(1 + math.exp(-self.magnitude*offset)))/self.magnitude
         return exponential*softplus
 
-    def __init__(self, crossover, nonlinearity, magnitude):
+    def __init__(self, crossover, nonlinearity, magnitude, _):
         self.crossover = crossover
         self.nonlinearity = nonlinearity
         self.magnitude = magnitude
@@ -272,7 +278,7 @@ class curve_negative_exponential_t:
         exponential = (math.exp(-self.nonlinearity*x) - 1)/(math.exp(-self.nonlinearity*self.crossover) - 1)
         return self.crossover*polynomial*exponential
 
-    def __init__(self, crossover, nonlinearity, magnitude):
+    def __init__(self, crossover, nonlinearity, magnitude, _):
         self.crossover = crossover
         self.nonlinearity = nonlinearity
         self.magnitude = magnitude
@@ -282,7 +288,7 @@ class curve_softplus_t:
     def __call__(self, x):
         return math.log(1 + math.exp(self.magnitude*(x - self.crossover)))/self.magnitude
 
-    def __init__(self, crossover, _nonlinearity, magnitude):
+    def __init__(self, crossover, _nonlinearity, magnitude, _):
         self.crossover = crossover
         self.magnitude = magnitude
 
@@ -295,18 +301,18 @@ class curve_synchronous_t:
         h = sign*math.pow((math.tanh(p) + 1)/2, 1/k)
         return self.crossover*(math.pow(self.motivity, h) - 1)/(math.pow(self.motivity, 1/2) - 1)
 
-    def __init__(self, crossover, gamma, _):
+    def __init__(self, crossover, gamma, motivity, smooth):
         self.crossover = crossover
         self.gamma = gamma
-        self.motivity = 5
-        self.smooth = .27
+        self.motivity = motivity
+        self.smooth = smooth
 
 # The logistic function has slope 1 at the crossover and is symmetric: 1/(1 + e^-((n/c)(x - c)))
 class curve_logistic_t:
     def __call__(self, x):
         return 2*self.crossover/(1 + math.exp(-(self.nonlinearity/self.crossover)*(x - self.crossover)))
 
-    def __init__(self, crossover, nonlinearity, _):
+    def __init__(self, crossover, nonlinearity, magnitude, _):
         self.crossover = crossover
         self.nonlinearity = nonlinearity
 
@@ -319,7 +325,7 @@ class curve_logistic_log_t:
         m = self.magnitude
         return math.pow(c, 1 - m)*math.pow(math.pow(x/c, -n/c) + 1, -m)
 
-    def __init__(self, crossover, nonlinearity, magnitude):
+    def __init__(self, crossover, nonlinearity, magnitude, _):
         self.crossover = crossover
         self.nonlinearity = nonlinearity
         self.magnitude = magnitude
@@ -330,7 +336,7 @@ class curve_smooth_t:
         offset = x - self.crossover
         return self.crossover*(math.tanh(self.nonlinearity*offset/(1 + offset*offset)) + 1)
 
-    def __init__(self, crossover, nonlinearity, _):
+    def __init__(self, crossover, nonlinearity, _magnitude, _):
         self.crossover = crossover
         self.nonlinearity = nonlinearity
 
@@ -346,7 +352,7 @@ class curve_smoothstep_t:
         vv = v*v
         return self.crossover*(3*uu - 2*uu*u)/(3*vv - 2*vv*v)
 
-    def __init__(self, crossover, _nonlinearity, _magnitude):
+    def __init__(self, crossover, _nonlinearity, _magnitude, _):
         self.crossover = crossover
 
 # combines a curve with a limiter and sensitivity
@@ -524,5 +530,6 @@ def create_arg_parser():
     return result
 
 args = create_arg_parser()
-app_t().run(args.output_t(generator_t(args.curve_t(args.crossover/table_size, args.nonlinearity, args.magnitude),
+app_t().run(args.output_t(
+    generator_t(args.curve_t(args.crossover/table_size, args.nonlinearity, args.magnitude, args.limit_rate),
     args.limiter_t(args.limit/args.sensitivity, args.limit_rate), args.sensitivity/args.in_game_sensitivity)))
