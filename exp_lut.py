@@ -6,12 +6,12 @@ import argparse
 table_size = 50
 
 default_in_game_sensitivity = 1/5
-default_crossover = 8
-default_nonlinearity = 4
-default_sensitivity = 5
-default_magnitude = 0.003
+default_crossover = 12
+default_nonlinearity = 3
+default_sensitivity = 8
+default_magnitude = 0.0075
 default_limit = 4
-default_limit_rate = 4
+default_limit_rate = 10
 default_curve = "limited_floored_power_law_log"
 
 def logistic(t, r):
@@ -32,7 +32,7 @@ These curves are pure power laws, ax^n. The floored versions are pure when no fl
 initial value, changing the result to m + ax^n. The same result is possible by offsetting x instead, but the terms are
 more complex. Because adding m is equivalent to shifting x, this still feels like a power law.
 
-They feel smooth because the initial tangent is always 0. The limited versions follow the original curve exactly until
+They feel smooth because the initial tangent is always 0 after about n = 2. The limited versions follow the original ax exactly until
 after the crossover, where they start to roll off smoothly. The limit is exactly sensitivity, -s. The rate is still
 controlled by limit rate, -r.
 
@@ -47,6 +47,8 @@ affected by sensitivity, but maybe shouldn't be.
 
 # same as power law, but magnitude specifies a min other than 0
 class curve_floored_power_law_t:
+    scale_magnitude = False
+
     def __call__(self, x):
         return self.magnitude + (1 - self.magnitude)*math.pow(2, -self.nonlinearity)*math.pow(x/self.crossover, self.nonlinearity)
 
@@ -57,6 +59,7 @@ class curve_floored_power_law_t:
 
 # same as floored power law, but with a natural limiter
 class curve_limited_floored_power_law_t:
+    scale_magnitude = False
     limited = True
 
     def __call__(self, x):
@@ -71,6 +74,8 @@ class curve_limited_floored_power_law_t:
 
 # same as floored power law, but of the log
 class curve_floored_power_law_log_t:
+    scale_magnitude = False
+
     def __call__(self, x):
         # when taking the log, the crossover moves by this much, so scale it back
         crossover_scale = math.exp(1) - 1
@@ -83,6 +88,7 @@ class curve_floored_power_law_log_t:
 
 # same as floored power law log, but with a natural limiter
 class curve_limited_floored_power_law_log_t:
+    scale_magnitude = False
     limited = True
 
     def __call__(self, x):
@@ -548,6 +554,9 @@ def create_arg_parser():
         result.limiter_t = limiter_null_t
     else:
         result.limiter_t = limiter_tanh_t
+
+    if hasattr(result.curve_t, "scale_magnitude") and not result.curve_t.scale_magnitude:
+        result.magnitude *= result.in_game_sensitivity/result.sensitivity
 
     return result
 
