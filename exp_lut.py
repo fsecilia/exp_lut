@@ -8,10 +8,10 @@ table_size = 50
 default_in_game_sensitivity = 1/5
 default_sensitivity = 1.37
 default_crossover = 8.3
-default_nonlinearity = 2.2
+default_nonlinearity = 2
 default_limit_rate = 0
 default_limit = 100
-default_magnitude = 0.009
+default_magnitude = 0.01
 default_curve = "floored_power_law"
 
 # the magnitude of the logistic function diminishes to 1 at about this point
