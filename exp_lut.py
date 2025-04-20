@@ -14,11 +14,15 @@ default_limit = 100
 default_magnitude = 0.009
 default_curve = "floored_power_law"
 
+# the magnitude of the logistic function diminishes to 1 at about this point
+# rates are expressed as a linear scale relative to this at 1.0
+logistic_unity_input_scale = 6.0
+
 def logistic(t, r):
     return (math.pow(math.tanh(math.pow(t/2, r)), 1/r) + 1)/2
 
 def unit_logistic(t, r):
-    return 2*logistic(2*t, r) - 1
+    return 2*logistic(2*t, logistic_unity_input_scale*r) - 1
 
 def taper(t, r):
     return t if t < 1 else unit_logistic(t - 1, r) + 1
