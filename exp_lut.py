@@ -16,18 +16,21 @@ default_limit = 10/5
 default_magnitude = 0.009
 default_curve = "floored_power_law"
 
-# the magnitude of the logistic function diminishes to 1 at about this point
-# rates are expressed as a linear scale relative to this at 1.0
-logistic_unity_input_scale = 6.0
+class logistic_t:
+    # the magnitude of the logistic function diminishes to 1 at about this point
+    # rates are expressed as a linear scale relative to this at 1.0
+    unity_input_scale = 6.0
 
-def logistic(t, r):
-    return (math.pow(math.tanh(math.pow(t/2, r)), 1/r) + 1)/2
+    def __call__(t, r):
+        return (math.pow(math.tanh(math.pow(t/2, r)), 1/r) + 1)/2
 
-def unit_logistic(t, r):
-    return 2*logistic(2*t, logistic_unity_input_scale*r) - 1
+    def unit(t, r):
+        return 2*logistic(2*t, logistic_t.unity_input_scale*r) - 1
+
+logistic = logistic_t()
 
 def taper(t, r):
-    return t if t < 1 else unit_logistic(t - 1, r) + 1
+    return t if t < 1 else logistic.unit(t - 1, r) + 1
 
 # same as power law, but magnitude specifies a min other than 0
 class curve_floored_power_law_t:
@@ -101,7 +104,7 @@ class curve_limited_power_law_t:
     limited = True
 
     def __call__(self, x):
-        return unit_logistic(self.nonlinearity*math.pow(x/self.crossover, self.nonlinearity), self.limit_rate)
+        return logistic.unit(self.nonlinearity*math.pow(x/self.crossover, self.nonlinearity), self.limit_rate)
 
     def __init__(self, crossover, nonlinearity, magnitude, limit_rate):
         self.crossover = crossover
@@ -124,7 +127,7 @@ class curve_limited_power_law_log_t:
     limited = True
 
     def __call__(self, x):
-        return unit_logistic(self.nonlinearity*math.pow(math.log(x/self.crossover + 1), self.nonlinearity), self.limit_rate)
+        return logistic.unit(self.nonlinearity*math.pow(math.log(x/self.crossover + 1), self.nonlinearity), self.limit_rate)
 
     def __init__(self, crossover, nonlinearity, magnitude, limit_rate):
         self.crossover = crossover
@@ -139,7 +142,7 @@ class curve_exponential_by_logistic_t:
         exponential = math.exp(self.nonlinearity*(x - self.crossover))
 
         unity_scale = 6
-        logistic = unit_logistic(unity_scale*self.magnitude*(x/self.crossover), self.limit_rate)
+        logistic = logistic.unit(unity_scale*self.magnitude*(x/self.crossover), self.limit_rate)
 
         return exponential*logistic
 
@@ -154,7 +157,7 @@ class curve_exponential_by_unit_logistic_log_t:
         exponential = math.exp(self.nonlinearity*(x - self.crossover))
 
         unity_scale = 6
-        logistic = unit_logistic(-unity_scale*self.magnitude*(math.log(x/self.crossover)), self.limit_rate)
+        logistic = logistic.unit(-unity_scale*self.magnitude*(math.log(x/self.crossover)), self.limit_rate)
 
         return exponential*logistic
 
