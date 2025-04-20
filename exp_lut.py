@@ -3,15 +3,17 @@
 import math
 import argparse
 
+# most recent graph: https://www.desmos.com/calculator/0ygnn1gmt8
+
 table_size = 50
 
 default_in_game_sensitivity = 1/5
-default_sensitivity = 1.37
+default_sensitivity = 1
 default_crossover = 8.3
-default_nonlinearity = 2
-default_limit_rate = 0
-default_limit = 100
-default_magnitude = 0.01
+default_nonlinearity = 2.2
+default_limit_rate = 4
+default_limit = 10/5
+default_magnitude = 0.009
 default_curve = "floored_power_law"
 
 # the magnitude of the logistic function diminishes to 1 at about this point
