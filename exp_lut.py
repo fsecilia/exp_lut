@@ -6,13 +6,13 @@ import argparse
 table_size = 50
 
 default_in_game_sensitivity = 1/5
-default_sensitivity = 3
+default_sensitivity = 1.37
 default_crossover = 8.3
-default_nonlinearity = 3
-default_limit_rate = 2
+default_nonlinearity = 2.2
+default_limit_rate = 0
 default_limit = 100
 default_magnitude = 0.009
-default_curve = "floored_power_law_log"
+default_curve = "floored_power_law"
 
 def logistic(t, r):
     return (math.pow(math.tanh(math.pow(t/2, r)), 1/r) + 1)/2
@@ -550,7 +550,7 @@ def create_arg_parser():
     result.curve_t = curve_choices[result.curve]
     result.output_t = format_choices[result.format]
 
-    if hasattr(result.curve_t, "limited") and result.curve_t.limited:
+    if not result.limit_rate or (hasattr(result.curve_t, "limited") and result.curve_t.limited):
         result.limiter_t = limiter_null_t
     else:
         result.limiter_t = limiter_tanh_t
