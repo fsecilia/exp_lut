@@ -36,17 +36,21 @@ These curves are pure power laws, ax^n. The floored versions are pure when no fl
 initial value, changing the result to m + ax^n. The same result is possible by offsetting x instead, but the terms are
 more complex. Because adding m is equivalent to shifting x, this still feels like a power law.
 
-They feel smooth because the initial tangent is always 0 after about n = 2. The limited versions follow the original ax exactly until
-after the crossover, where they start to roll off smoothly. The limit is exactly sensitivity, -s. The rate is still
-controlled by limit rate, -r.
+They feel smooth because the initial tangent is always 0 after about n = 2. The limited versions follow the original ax
+exactly until after the crossover, where they start to roll off smoothly. The limit is exactly sensitivity, -s. The
+rate is still controlled by limit rate, -r.
 
-The log version is a*log(x + 1)^n. It feels slower and smoother, but the params are the same.
+The log version is a*log(x + 1)^n. The params are the same. This is difficult to tune if you flick, but awesome if you
+don't. The main differerence is this eventually becomes concave, like log(x), so it diminishes as x increases. This is the
+opposite of exponentials and power laws. This makes it feel very smooth, and it tends to have a natural limit. With n >
+2, it starts an s curve that rounds out in a shape similar to log. Near this elbow, there is a portion that you can
+flick, but if you try to flick from the range where it starts to look like log, the rates decrease and it is a very
+different technique than with an exponential or a normal power law.
 
 The purpose of floored versions is to tune how much the mouse sits down when stopping and starting. Lower floors are
 more accurate, but stop dead and feel sluggish to start again. It's most noticable when changing directions. Setting a
 very low floor, on the order of .001 to .01, will pick up the minimum sensitivity. Too little and it will still feel
-sticky and sluggish. Too much and it will feel floaty and inaccurate. The floor is controlled by -m, magnitude. It is
-affected by sensitivity, but maybe shouldn't be.
+sticky and sluggish. Too much and it will feel floaty and inaccurate. The floor is controlled by -m, magnitude.
 '''
 
 # same as power law, but magnitude specifies a min other than 0
