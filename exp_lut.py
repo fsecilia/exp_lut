@@ -8,13 +8,15 @@ import argparse
 table_size = 50
 
 class params_t:
-    def __init__(self, curve, in_game_sensitivity, sensitivity, crossover, nonlinearity, magnitude, limit, limit_rate):
+    def __init__(self, curve, in_game_sensitivity, sensitivity, crossover, nonlinearity, magnitude, floor,
+        limit, limit_rate):
         self.curve = curve
         self.in_game_sensitivity = in_game_sensitivity
         self.sensitivity = sensitivity
         self.crossover = crossover
         self.nonlinearity = nonlinearity
         self.magnitude = magnitude
+        self.floor = floor
         self.limit = limit
         self.limit_rate = limit_rate
 
@@ -24,7 +26,8 @@ default_params = params_t(
     sensitivity = 1,
     crossover = 8.3,
     nonlinearity = 2.2,
-    magnitude = 0.009,
+    magnitude = 1,
+    floor = 0.009,
     limit_rate = 4,
     limit = 10/5,
 )
@@ -47,59 +50,54 @@ def taper(t, r):
 
 # same as power law, but magnitude specifies a min other than 0
 class curve_floored_power_law_t:
-    scale_magnitude = False
-
     def __call__(self, x):
-        return self.magnitude + (1 - self.magnitude)*math.pow(2, -self.nonlinearity)*math.pow(x/self.crossover, self.nonlinearity)
+        return self.floor + (1 - self.floor)*math.pow(2, -self.nonlinearity)*math.pow(x/self.crossover, self.nonlinearity)
 
     def __init__(self, params):
         self.crossover = params.crossover
         self.nonlinearity = params.nonlinearity
-        self.magnitude = params.magnitude
+        self.floor = params.floor
 
 # same as floored power law, but with a natural limiter
 class curve_limited_floored_power_law_t:
-    scale_magnitude = False
+    i = False
     limited = True
 
     def __call__(self, x):
         tapered = taper(x/self.crossover, self.limit_rate)
-        return self.magnitude + (1 - self.magnitude)*math.pow(2, -self.nonlinearity)*math.pow(tapered, self.nonlinearity)
+        return self.floor + (1 - self.floor)*math.pow(2, -self.nonlinearity)*math.pow(tapered, self.nonlinearity)
 
     def __init__(self, params):
         self.crossover = params.crossover
         self.nonlinearity = params.nonlinearity
-        self.magnitude = params.magnitude
+        self.floor = params.floor
         self.limit_rate = params.limit_rate
 
 # same as floored power law, but of the log
 class curve_floored_power_law_log_t:
-    scale_magnitude = False
-
     def __call__(self, x):
         # when taking the log, the crossover moves by this much, so scale it back
         crossover_scale = math.exp(1) - 1
-        return self.magnitude + (1 - self.magnitude)*math.pow(2, -self.nonlinearity)*math.pow(math.log(crossover_scale*x/self.crossover + 1), self.nonlinearity)
+        return self.floor + (1 - self.floor)*math.pow(2, -self.nonlinearity)*math.pow(math.log(crossover_scale*x/self.crossover + 1), self.nonlinearity)
 
     def __init__(self, params):
         self.crossover = params.crossover
         self.nonlinearity = params.nonlinearity
-        self.magnitude = params.magnitude
+        self.floor = params.floor
 
 # same as floored power law log, but with a natural limiter
 class curve_limited_floored_power_law_log_t:
-    scale_magnitude = False
     limited = True
 
     def __call__(self, x):
         crossover_scale = math.exp(1) - 1
         tapered = taper(math.log(crossover_scale*x/self.crossover + 1), self.limit_rate)
-        return self.magnitude + (1 - self.magnitude)*math.pow(2, - self.nonlinearity)*math.pow(tapered, self.nonlinearity)
+        return self.floor + (1 - self.floor)*math.pow(2, - self.nonlinearity)*math.pow(tapered, self.nonlinearity)
 
     def __init__(self, params):
         self.crossover = params.crossover
         self.nonlinearity = params.nonlinearity
-        self.magnitude = params.magnitude
+        self.floor = params.floor
         self.limit_rate = params.limit_rate
 
 # (m(x/c))^n = ax^n, a = mc^-n
@@ -110,7 +108,6 @@ class curve_power_law_t:
     def __init__(self, params):
         self.crossover = params.crossover
         self.nonlinearity = params.nonlinearity
-        self.magnitude = params.magnitude
 
 # same as power law, but naturally limited in a way that very closely approximates the original power law up until c.
 class curve_limited_power_law_t:
@@ -493,8 +490,9 @@ def create_arg_parser():
     impl.add_argument('-c', '--crossover', type=float, default=default_params.crossover)
     impl.add_argument('-n', '--nonlinearity', type=float, default=default_params.nonlinearity)
     impl.add_argument('-m', '--magnitude', type=float, default=default_params.magnitude)
+    impl.add_argument('-f', '--floor', type=float, default=default_params.floor)
     impl.add_argument('-l', '--limit', type=float, default=default_params.limit)
-    impl.add_argument('-r', '--limit_rate', type=float, default=default_params.limit_rate)
+    impl.add_argument('-r', '--limit-rate', type=float, default=default_params.limit_rate)
     impl.add_argument('-i', '--in-game-sensitivity', type=float, default=default_params.in_game_sensitivity,
         help="Multiply in-game sensitivity by this value. Scales final output by the inverse.")
 
@@ -528,16 +526,16 @@ def create_arg_parser():
     }
     impl.add_argument('-x', '--curve', choices=curve_choices.keys(), default=default_params.curve)
 
-    format_choices={
+    output_format_choices={
        "raw_accel": output_raw_accel_t,
        "libinput": output_libinput_t,
     }
-    impl.add_argument('-f', '--format', choices=format_choices.keys(), default="raw_accel")
+    impl.add_argument('-o', '--output-format', choices=output_format_choices.keys(), default="raw_accel")
 
     result = impl.parse_args()
 
     result.curve_t = curve_choices[result.curve]
-    result.output_t = format_choices[result.format]
+    result.output_t = output_format_choices[result.output_format]
 
     if not result.limit_rate or (hasattr(result.curve_t, "limited") and result.curve_t.limited):
         result.limiter_t = limiter_null_t
@@ -551,6 +549,7 @@ def create_arg_parser():
         crossover = result.crossover/table_size,
         nonlinearity = result.nonlinearity,
         magnitude = result.magnitude,
+        floor = result.floor/result.sensitivity,
         limit_rate = result.limit_rate,
         limit = result.limit/result.sensitivity
     )
