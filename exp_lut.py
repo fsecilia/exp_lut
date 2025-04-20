@@ -3,7 +3,7 @@
 import math
 import argparse
 
-# most recent graph: https://www.desmos.com/calculator/0ygnn1gmt8
+# most recent graph: https://www.desmos.com/calculator/xz8ictte6a
 
 table_size = 50
 
@@ -21,15 +21,15 @@ class params_t:
         self.limit_rate = limit_rate
 
 default_params = params_t(
-    curve = "floored_power_law",
-    in_game_sensitivity = 1/5,
-    sensitivity = 1,
+    curve = "limited_floored_power_law",
+    in_game_sensitivity = 1,
+    sensitivity = 5,
     crossover = 8.3,
     nonlinearity = 2.2,
     magnitude = 1,
     floor = 0.009,
-    limit_rate = 4,
-    limit = 10/5,
+    limit_rate = 0.6,
+    limit = 10,
 )
 
 class logistic_t:
@@ -37,10 +37,10 @@ class logistic_t:
     # rates are expressed as a linear scale relative to this at 1.0
     unity_input_scale = 6.0
 
-    def __call__(t, r):
+    def __call__(self, t, r):
         return (math.pow(math.tanh(math.pow(t/2, r)), 1/r) + 1)/2
 
-    def unit(t, r):
+    def unit(self, t, r):
         return 2*logistic(2*t, logistic_t.unity_input_scale*r) - 1
 
 logistic = logistic_t()
@@ -60,17 +60,18 @@ class curve_floored_power_law_t:
 
 # same as floored power law, but with a natural limiter
 class curve_limited_floored_power_law_t:
-    i = False
     limited = True
 
     def __call__(self, x):
-        tapered = taper(x/self.crossover, self.limit_rate)
+        k = math.pow(self.limit, 1/self.nonlinearity)
+        tapered = k*taper(x/(k*self.crossover), self.limit_rate)
         return self.floor + (1 - self.floor)*math.pow(2, -self.nonlinearity)*math.pow(tapered, self.nonlinearity)
 
     def __init__(self, params):
         self.crossover = params.crossover
         self.nonlinearity = params.nonlinearity
         self.floor = params.floor
+        self.limit = params.limit
         self.limit_rate = params.limit_rate
 
 # same as floored power law, but of the log
