@@ -22,14 +22,14 @@ class params_t:
 
 default_params = params_t(
     curve = "limited_floored_power_law",
-    in_game_sensitivity = 1,
-    sensitivity = 5,
+    in_game_sensitivity = 1/5,
+    sensitivity = 0.8,
     crossover = 8.3,
     nonlinearity = 2.2,
     magnitude = 1,
     floor = 0.009,
     limit_rate = 0.6,
-    limit = 10,
+    limit = 10/5,
 )
 
 class logistic_t:
