@@ -8,10 +8,9 @@ import argparse
 table_size = 50
 
 class params_t:
-    def __init__(self, curve, in_game_sensitivity, sensitivity, crossover, nonlinearity, magnitude, floor,
+    def __init__(self, curve, sensitivity, crossover, nonlinearity, magnitude, floor,
         limit, limit_rate):
         self.curve = curve
-        self.in_game_sensitivity = in_game_sensitivity
         self.sensitivity = sensitivity
         self.crossover = crossover
         self.nonlinearity = nonlinearity
@@ -21,32 +20,70 @@ class params_t:
         self.limit_rate = limit_rate
 
 default_params = params_t(
-    curve = "limited_floored_power_law",
-    in_game_sensitivity = 1/5,
-    sensitivity = 0.8,
+    curve = "input_limited_floored_exponential",
+    sensitivity = 5,
     crossover = 8.3,
-    nonlinearity = 2.0,
+    nonlinearity = 3,
     magnitude = 1,
     floor = 0.009,
-    limit_rate = 0.6,
-    limit = 10/5,
+    limit_rate = 12,
+    limit = 0.96,
 )
 
-class logistic_t:
-    # the magnitude of the logistic function diminishes to 1 at about this point
-    # rates are expressed as a linear scale relative to this at 1.0
-    unity_input_scale = 6.0
+def logistic(t, r):
+    sign = -1 if t < 0 else 1
+    return (math.pow(sign*math.tanh(math.pow(math.fabs(t/2), r)), 1/r) + 1)/2
 
-    def __call__(self, t, r):
-        return (math.pow(math.tanh(math.pow(t/2, r)), 1/r) + 1)/2
-
-    def unit(self, t, r):
-        return 2*logistic(2*t, logistic_t.unity_input_scale*r) - 1
-
-logistic = logistic_t()
+def unit_logistic(t, r):
+    return 2*logistic(2*t, r) - 1
 
 def taper(t, r):
-    return t if t < 1 else logistic.unit(t - 1, r) + 1
+    return t if t < 1 else unit_logistic(t - 1, r) + 1
+
+def taper_output(t, c, l, r):
+    return t if t < c else (l - c)*unit_logistic((t - c)/(l - c), r) + c
+
+def taper_input(t, l, r):
+    return unit_logistic((t/l)*(1 + 1/r), r)
+
+def floor(t, s, c, f):
+    return t*(s*c - f) + f
+
+class curve_input_limited_floored_exponential_t:
+    limited = True
+
+    def __call__(self, x):
+        t = taper_input(x, self.limit, self.limit_rate)
+        y0 = math.exp(-self.nonlinearity*self.crossover)
+        y = math.exp(self.nonlinearity*(t - self.crossover)) - y0
+        f = floor(y, self.sensitivity, self.crossover, self.floor)
+        return f
+
+    def __init__(self, params):
+        self.sensitivity = params.sensitivity
+        self.crossover = params.crossover
+        self.nonlinearity = params.nonlinearity
+        self.floor = params.floor
+        self.limit = params.limit
+        self.limit_rate = params.limit_rate
+
+# same as exponential_t, but naturally tapers output and applies a floor
+class curve_limited_floored_exponential_t:
+    limited = True
+
+    def __call__(self, x):
+        y0 = math.exp(-self.nonlinearity*self.crossover)
+        y = math.exp(self.nonlinearity*(x - self.crossover)) - y0
+        f = floor(y, self.sensitivity, self.crossover, self.floor)
+        return taper_output(f, self.crossover, self.limit, self.limit_rate)
+
+    def __init__(self, params):
+        self.sensitivity = params.sensitivity
+        self.crossover = params.crossover
+        self.nonlinearity = params.nonlinearity
+        self.floor = params.floor
+        self.limit = params.limit
+        self.limit_rate = params.limit_rate
 
 # same as power law, but magnitude specifies a min other than 0
 class curve_floored_power_law_t:
@@ -115,7 +152,7 @@ class curve_limited_power_law_t:
     limited = True
 
     def __call__(self, x):
-        return logistic.unit(self.nonlinearity*math.pow(x/self.crossover, self.nonlinearity), self.limit_rate)
+        return unit_logistic(self.nonlinearity*math.pow(x/self.crossover, self.nonlinearity), self.limit_rate)
 
     def __init__(self, params):
         self.crossover = params.crossover
@@ -138,7 +175,7 @@ class curve_limited_power_law_log_t:
     limited = True
 
     def __call__(self, x):
-        return logistic.unit(self.nonlinearity*math.pow(math.log(x/self.crossover + 1), self.nonlinearity), self.limit_rate)
+        return unit_logistic(self.nonlinearity*math.pow(math.log(x/self.crossover + 1), self.nonlinearity), self.limit_rate)
 
     def __init__(self, params):
         self.crossover = params.crossover
@@ -150,7 +187,7 @@ class curve_limited_power_law_log_t:
 # so the range above the crossover should deviate little from pure exp
 class curve_exponential_by_logistic_t:
     def __call__(self, x):
-        return math.exp(self.nonlinearity*(x - self.crossover))*logistic.unit(self.magnitude*(x/self.crossover), self.limit_rate)
+        return math.exp(self.nonlinearity*(x - self.crossover))*unit_logistic(self.magnitude*(x/self.crossover), self.limit_rate)
 
     def __init__(self, params):
         self.crossover = params.crossover
@@ -160,7 +197,7 @@ class curve_exponential_by_logistic_t:
 
 class curve_exponential_by_unit_logistic_log_t:
     def __call__(self, x):
-        return math.exp(self.nonlinearity*(x - self.crossover))*logistic.unit(-self.magnitude*(math.log(x/self.crossover)), self.limit_rate)
+        return math.exp(self.nonlinearity*(x - self.crossover))*unit_logistic(-self.magnitude*(math.log(x/self.crossover)), self.limit_rate)
 
     def __init__(self, params):
         self.crossover = params.crossover
@@ -394,7 +431,7 @@ class limiter_tanh_t:
         return rescaled
 
     def __init__(self, params):
-        self.limit = params.limit
+        self.limit = params.limit/params.sensitivity
         self.rate = params.limit_rate
 
 class limiter_null_t:
@@ -494,8 +531,6 @@ def create_arg_parser():
     impl.add_argument('-f', '--floor', type=float, default=default_params.floor)
     impl.add_argument('-l', '--limit', type=float, default=default_params.limit)
     impl.add_argument('-r', '--limit-rate', type=float, default=default_params.limit_rate)
-    impl.add_argument('-i', '--in-game-sensitivity', type=float, default=default_params.in_game_sensitivity,
-        help="Multiply in-game sensitivity by this value. Scales final output by the inverse.")
 
     curve_choices={
         "constant": curve_constant_t,
@@ -524,6 +559,8 @@ def create_arg_parser():
         "limited_floored_power_law": curve_limited_floored_power_law_t,
         "floored_power_law_log": curve_floored_power_law_log_t,
         "limited_floored_power_law_log": curve_limited_floored_power_law_log_t,
+        "limited_floored_exponential": curve_limited_floored_exponential_t,
+        "input_limited_floored_exponential": curve_input_limited_floored_exponential_t,
     }
     impl.add_argument('-x', '--curve', choices=curve_choices.keys(), default=default_params.curve)
 
@@ -545,14 +582,13 @@ def create_arg_parser():
 
     result.params = params_t(
         curve = result.curve,
-        in_game_sensitivity = result.in_game_sensitivity,
-        sensitivity = result.sensitivity/result.in_game_sensitivity,
+        sensitivity = result.sensitivity,
         crossover = result.crossover/table_size,
         nonlinearity = result.nonlinearity,
         magnitude = result.magnitude,
-        floor = result.floor/result.sensitivity,
+        floor = result.floor,
         limit_rate = result.limit_rate,
-        limit = result.limit/result.sensitivity
+        limit = result.limit
     )
 
     return result
