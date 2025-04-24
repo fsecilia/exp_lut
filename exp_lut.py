@@ -20,19 +20,19 @@ class params_t:
         self.limit_rate = limit_rate
 
 default_params = params_t(
-    curve = "symmetric_limited_exponential",
+    curve = "input_limited_tapered_tangent_exponential",
     sensitivity = 1.0,
     crossover = 8.3,
     nonlinearity = 5.0,
-    magnitude = 1.0,
+    magnitude = 50,
     floor = 0.0,
-    limit = 0.9,
+    limit = 0.68,
     limit_rate = 25,
 )
 
 def logistic(t, r):
     sign = -1 if t < 0 else 1
-    return (math.pow(sign*math.tanh(math.pow(math.fabs(t/2), r)), 1/r) + 1)/2
+    return (sign*math.pow(math.tanh(math.pow(sign*(t/2), r)), 1/r) + 1)/2
 
 def unit_logistic(t, r):
     return 2*logistic(2*t, r) - 1
@@ -50,8 +50,8 @@ def floor(t, s, c, f):
     return t*(s*c - f) + f
 
 # floored exponential, but the input is limited and the tangent is tapered
-# it is symmetric because the input before the limit is run through the symmetric logistic (not just the right half)
-class curve_symmetric_limited_exponential_t:
+# this is very similar to curve_input_limited_floored_exponential_t, but with a usable tangent
+class curve_input_limited_tapered_tangent_exponential_t:
     limited = True
 
     def __call__(self, x):
@@ -59,23 +59,19 @@ class curve_symmetric_limited_exponential_t:
         s = self.sensitivity
         c = self.crossover
         n = self.nonlinearity
+        m = self.magnitude
         f = self.floor
         l = self.limit
         r = self.limit_rate
-        e = math.exp(1)
 
-        # shift input so it is centered on half the limit
-        # this necessarily increases the slope, which scales the input
-        t = x/l - 1/2
-        k = -1 if t < 0 else 1
+        # taper input tangent
+        t = 2*logistic(2*(x - (m + 1)/m), m)
 
         # limit input
-        # this is the logistic, but normalized to [0, 1]^2, input scaled so tangents are 1 at 0 and 1
-        # since t is already shifted, this is also, and it should top out at l
-        i = (k*math.pow(math.tanh(math.pow(2, r + 1)*(1 + 1/e)*math.pow(k*t, r)), 1/r) + 1)/2
+        u = 2*logistic(2*(t + 1 - l), r) - 2*logistic(2*(1 - l), r)
 
         # calc normally with limited input
-        y = math.exp(n*(i - c))
+        y = math.exp(n*(u - c))
 
         # floor output
         y0 = math.exp(-n*c) - f/s
@@ -86,11 +82,13 @@ class curve_symmetric_limited_exponential_t:
         self.sensitivity = params.sensitivity
         self.crossover = params.crossover
         self.nonlinearity = params.nonlinearity
+        self.magnitude = params.magnitude
         self.floor = params.floor
         self.limit = params.limit
         self.limit_rate = params.limit_rate
 
 # exponential, but limited on input side, with simple additive (nonscaling) floor
+# the tangent is unmodified and you can feel it
 class curve_input_limited_floored_exponential_t:
     limited = True
 
@@ -617,7 +615,7 @@ def create_arg_parser():
         "limited_floored_power_law_log": curve_limited_floored_power_law_log_t,
         "limited_floored_exponential": curve_limited_floored_exponential_t,
         "input_limited_floored_exponential": curve_input_limited_floored_exponential_t,
-        "symmetric_limited_exponential": curve_symmetric_limited_exponential_t,
+        "input_limited_tapered_tangent_exponential": curve_input_limited_tapered_tangent_exponential_t,
     }
     impl.add_argument('-x', '--curve', choices=curve_choices.keys(), default=default_params.curve)
 
