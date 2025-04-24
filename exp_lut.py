@@ -3,8 +3,6 @@
 import math
 import argparse
 
-# most recent graph: https://www.desmos.com/calculator/xz8ictte6a
-
 table_size = 50
 
 class params_t:
@@ -51,6 +49,7 @@ def floor(t, s, c, f):
 
 # floored exponential, but the input is limited and the tangent is tapered
 # this is very similar to curve_input_limited_floored_exponential_t, but with a usable tangent
+# https://www.desmos.com/calculator/nwefns0msj
 class curve_input_limited_tapered_tangent_exponential_t:
     limited = True
 
