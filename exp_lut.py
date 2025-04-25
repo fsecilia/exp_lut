@@ -127,7 +127,7 @@ class curve_limited_floored_exponential_t:
     def __call__(self, x):
         y0 = math.exp(-self.nonlinearity*self.crossover)
         y = math.exp(self.nonlinearity*(x - self.crossover)) - y0
-        f = floor(y, self.sensitivity, self.crossover, self.floor)
+        f = y + self.floor
         return taper_output(f, self.crossover, self.limit, self.limit_rate)
 
     def __init__(self, params):
@@ -138,24 +138,24 @@ class curve_limited_floored_exponential_t:
         self.limit = params.limit
         self.limit_rate = params.limit_rate
 
-# same as power law, but magnitude specifies a min other than 0
+# same as power law, but with a simple floor
 class curve_floored_power_law_t:
     def __call__(self, x):
-        return self.floor + (1 - self.floor)*math.pow(2, -self.nonlinearity)*math.pow(x/self.crossover, self.nonlinearity)
+        return self.floor + math.pow(2, -self.nonlinearity)*math.pow(x/self.crossover, self.nonlinearity)
 
     def __init__(self, params):
         self.crossover = params.crossover
         self.nonlinearity = params.nonlinearity
         self.floor = params.floor
 
-# same as floored power law, but with a natural limiter
+# same as floored power law, but with a natural output limiter
 class curve_limited_floored_power_law_t:
     limited = True
 
     def __call__(self, x):
         k = math.pow(self.limit, 1/self.nonlinearity)
         tapered = k*taper(x/(k*self.crossover), self.limit_rate)
-        return self.floor + (1 - self.floor)*math.pow(2, -self.nonlinearity)*math.pow(tapered, self.nonlinearity)
+        return self.floor + math.pow(2, -self.nonlinearity)*math.pow(tapered, self.nonlinearity)
 
     def __init__(self, params):
         self.crossover = params.crossover
@@ -169,21 +169,21 @@ class curve_floored_power_law_log_t:
     def __call__(self, x):
         # when taking the log, the crossover moves by this much, so scale it back
         crossover_scale = math.exp(1) - 1
-        return self.floor + (1 - self.floor)*math.pow(2, -self.nonlinearity)*math.pow(math.log(crossover_scale*x/self.crossover + 1), self.nonlinearity)
+        return self.floor + math.pow(2, -self.nonlinearity)*math.pow(math.log(crossover_scale*x/self.crossover + 1), self.nonlinearity)
 
     def __init__(self, params):
         self.crossover = params.crossover
         self.nonlinearity = params.nonlinearity
         self.floor = params.floor
 
-# same as floored power law log, but with a natural limiter
+# same as floored power law log, but with a natural output limit
 class curve_limited_floored_power_law_log_t:
     limited = True
 
     def __call__(self, x):
         crossover_scale = math.exp(1) - 1
         tapered = taper(math.log(crossover_scale*x/self.crossover + 1), self.limit_rate)
-        return self.floor + (1 - self.floor)*math.pow(2, - self.nonlinearity)*math.pow(tapered, self.nonlinearity)
+        return self.floor + math.pow(2, - self.nonlinearity)*math.pow(tapered, self.nonlinearity)
 
     def __init__(self, params):
         self.crossover = params.crossover
