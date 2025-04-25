@@ -18,14 +18,14 @@ class params_t:
         self.limit_rate = limit_rate
 
 default_params = params_t(
-    curve = "input_limited_tapered_tangent_exponential",
-    sensitivity = 1.47,
+    curve = "input_limited_log",
+    sensitivity = 0.48,
     crossover = 8.3,
-    nonlinearity = 3.0,
-    magnitude = 35,
+    nonlinearity = 6.16,
+    magnitude = 1,
     floor = 0,
-    limit = 0.9,
-    limit_rate = 25,
+    limit = 0.885,
+    limit_rate = 12.1,
 )
 
 def logistic(t, r):
@@ -46,6 +46,40 @@ def taper_input(t, l, r):
 
 def floor(t, s, c, f):
     return t*(s*c - f) + f
+
+# same as input_limited_tapered_tangent_exponential, but of the log
+class curve_input_limited_log_t:
+    limited = True
+
+    def __call__(self, x):
+        # aliases to match graph
+        s = self.sensitivity
+        c = self.crossover
+        n = self.nonlinearity
+        m = self.magnitude
+        f = self.floor
+        l = self.limit
+        r = self.limit_rate
+
+        # limit input
+        u = 2*logistic(2*(x + 1 - l), r) - 2*logistic(2*(1 - l), r)
+        #u = x
+
+        # calc normally with limited input
+        y = math.pow(math.log(m*u/c + math.exp(1)/2), n)
+        y0 = math.pow(math.log(math.exp(1)/2), n)
+
+        return y - y0 + f/s
+
+
+    def __init__(self, params):
+        self.sensitivity = params.sensitivity
+        self.crossover = params.crossover
+        self.nonlinearity = params.nonlinearity
+        self.magnitude = params.magnitude
+        self.floor = params.floor
+        self.limit = params.limit
+        self.limit_rate = params.limit_rate
 
 # floored exponential, but the input is limited and the tangent is tapered
 # this is very similar to curve_input_limited_floored_exponential_t, but with a usable tangent
@@ -615,6 +649,7 @@ def create_arg_parser():
         "limited_floored_exponential": curve_limited_floored_exponential_t,
         "input_limited_floored_exponential": curve_input_limited_floored_exponential_t,
         "input_limited_tapered_tangent_exponential": curve_input_limited_tapered_tangent_exponential_t,
+        "input_limited_log": curve_input_limited_log_t,
     }
     impl.add_argument('-x', '--curve', choices=curve_choices.keys(), default=default_params.curve)
 
