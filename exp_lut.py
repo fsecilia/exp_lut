@@ -18,14 +18,14 @@ class params_t:
         self.limit_rate = limit_rate
 
 default_params = params_t(
-    curve = "input_limited_log",
-    sensitivity = 0.48,
+    curve = "input_limited_tapered_tangent_exponential",
+    sensitivity = 1.0,
     crossover = 8.3,
-    nonlinearity = 6.16,
-    magnitude = 1,
+    nonlinearity = 5.0,
+    magnitude = 35,
     floor = 0,
-    limit = 0.885,
-    limit_rate = 12.1,
+    limit = 0.813,
+    limit_rate = 25,
 )
 
 def logistic(t, r):
