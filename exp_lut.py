@@ -19,12 +19,12 @@ class params_t:
 
 default_params = params_t(
     curve = "input_limited_tapered_tangent_exponential",
-    sensitivity = 1.0,
+    sensitivity = 0.91,
     crossover = 8.3,
     nonlinearity = 5.0,
-    magnitude = 35,
+    magnitude = 44,
     floor = 0,
-    limit = 0.813,
+    limit = 0.835,
     limit_rate = 25,
 )
 
