@@ -5,6 +5,10 @@ import argparse
 
 table_size = 50
 
+# (x + 1)^(n*ln(x + 1)) - 1
+# x*ln(x + 1)
+# sxe^(sign(ln(x/c))abs(ln(x/c))^n) starts of flat, grows quickly, flattens out near crossover to s, then grows quickly again.
+
 class params_t:
     def __init__(self, curve, sensitivity, crossover, nonlinearity, magnitude, floor,
         limit, limit_rate):
