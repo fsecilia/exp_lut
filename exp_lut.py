@@ -19,13 +19,13 @@ class params_t:
 
 default_params = params_t(
     curve = "input_limited_tapered_tangent_exponential",
-    sensitivity = 1.13,
+    sensitivity = 0.9,
     crossover = 8.3,
-    nonlinearity = 4.2,
-    magnitude = 100,
+    nonlinearity = 6.2,
+    magnitude = 50,
     floor = 0,
-    limit = 0.857,
-    limit_rate = 13,
+    limit = 0.6688,
+    limit_rate = 6,
 )
 
 def logistic(t, r):
