@@ -22,14 +22,14 @@ class params_t:
         self.limit_rate = limit_rate
 
 default_params = params_t(
-    curve = "input_limited_tapered_tangent_exponential",
-    sensitivity = 0.614,
-    crossover = 6,
-    nonlinearity = 8,
-    magnitude = 50,
-    floor = 0,
-    limit = 0.558,
-    limit_rate = 4.3,
+    curve = "symmetric_log",
+    floor = 0.00,
+    limit = 5,
+    limit_rate = 25,
+    sensitivity = 1,
+    crossover = 10,
+    nonlinearity = 1.0,
+    magnitude = 0.5,
 )
 
 def logistic(t, r):
@@ -50,6 +50,57 @@ def taper_input(t, l, r):
 
 def floor(t, s, c, f):
     return t*(s*c - f) + f
+
+class curve_symmetric_log_t:
+    limited = True
+
+    def __call__(self, x):
+        # aliases to match graph
+        s = self.sensitivity
+        c = self.crossover
+        n = self.nonlinearity
+        m = self.magnitude
+        l = self.limit
+
+        t = n*math.log(x/c)
+        g = -1 if t < 0 else 1
+        h = g*math.pow(math.tanh(math.pow(g*t, 0.5/m)), m/0.5) + 1
+        y = s*((h/2)*(l - 1/l) + 1/l)
+
+        return y
+
+    def __init__(self, params):
+        self.sensitivity = params.sensitivity
+        self.crossover = params.crossover
+        self.nonlinearity = params.nonlinearity
+        self.magnitude = params.magnitude
+        self.floor = params.floor
+        self.limit = params.limit
+        self.limit_rate = params.limit_rate
+
+class curve_input_limited_exponential_t:
+    limited = True
+
+    def __call__(self, x):
+        # aliases to match graph
+        c = self.crossover
+        n = self.nonlinearity
+        l = self.limit
+        r = self.limit_rate
+
+        # limit input
+        u = 2*logistic(2*(x + 1 - l), r) - 2*logistic(2*(1 - l), r)
+
+        # calc normally with limited input
+        y = math.exp(n*(u - c))
+
+        return y
+
+    def __init__(self, params):
+        self.crossover = params.crossover
+        self.nonlinearity = params.nonlinearity
+        self.limit = params.limit
+        self.limit_rate = params.limit_rate
 
 # same as input_limited_tapered_tangent_exponential, but of the log
 class curve_input_limited_log_t:
@@ -75,7 +126,6 @@ class curve_input_limited_log_t:
 
         return y - y0 + f/s
 
-
     def __init__(self, params):
         self.sensitivity = params.sensitivity
         self.crossover = params.crossover
@@ -86,7 +136,7 @@ class curve_input_limited_log_t:
         self.limit_rate = params.limit_rate
 
 # floored exponential, but the input is limited and the tangent is tapered
-# this is very similar to curve_input_limited_floored_exponential_t, but with a usable tangent
+# this is very similar to curve_input_limited_floored_exponential_t, but with a tangent suitable for glass.
 # https://www.desmos.com/calculator/nwefns0msj
 class curve_input_limited_tapered_tangent_exponential_t:
     limited = True
@@ -125,7 +175,7 @@ class curve_input_limited_tapered_tangent_exponential_t:
         self.limit_rate = params.limit_rate
 
 # exponential, but limited on input side, with simple additive (nonscaling) floor
-# the tangent is unmodified and you can feel it
+# the tangent is unmodified and you can feel it on glass.
 class curve_input_limited_floored_exponential_t:
     limited = True
 
@@ -143,10 +193,10 @@ class curve_input_limited_floored_exponential_t:
         t = k*l*math.pow(math.tanh(k*math.pow(x/l, r)), 1/r)
 
         # calc normally with limited input
-        y = math.exp(n*(t - c))
+        y = math.exp((n/c)*(t - c))
 
         # floor output
-        y0 = math.exp(-n*c) - f/s
+        y0 = math.exp(-n) - f/s
 
         return y - y0
 
@@ -654,6 +704,8 @@ def create_arg_parser():
         "input_limited_floored_exponential": curve_input_limited_floored_exponential_t,
         "input_limited_tapered_tangent_exponential": curve_input_limited_tapered_tangent_exponential_t,
         "input_limited_log": curve_input_limited_log_t,
+        "input_limited_exponential": curve_input_limited_exponential_t,
+        "symmetric_log": curve_symmetric_log_t,
     }
     impl.add_argument('-x', '--curve', choices=curve_choices.keys(), default=default_params.curve)
 
