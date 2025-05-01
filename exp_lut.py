@@ -1,4 +1,35 @@
 #! /usr/bin/env python3
+'''
+The graph of the curve is here: https://www.desmos.com/calculator/qkxcxna8sr
+
+The first set of variables there match parameters you pass to the script on the command line, or edit default_params in
+the script itself. This way you can see what happens when you change them. There is also another set of variables with
+mostly random names, but the same order, that define another instance of the curve. You can use them to show your
+current settings as a reference while you change things around.
+
+The current default settings are: python exp_lut.py -f 0 -s 25 -c 12 -n 1.0 -m 0.5
+This should be pretty close. A tweak to -s should be all you need. If not, here is a description of each, but moving
+them around on the graph will make this more obvious.
+
+1) -s controls max speed, overall. Start here. If it feels too fast, lower -s. If it feels too slow, raise -s. It
+controls magnitude, the how much. This is symmetric in log space, and the outputs range from 1/s to s, so this also
+controls the min speed (1/s).
+
+2) -c controls where the graph switches from minimizing to maximizing. It feels like it controls how soon the
+nonlinearity kicks in; it controls the when. If it feels like it gets too fast too quickly, increase -c. If it feels
+like it takes too long to get going, decrease -c. This moves inversely because it is in the same units as input
+velocity, which puts it in the denominator.
+
+3) -m controls the starting tangent. You want it to just kiss horizontally off the start of the graph, like a parabola.
+If it is laying down too much, increase -m. If it is starting at too steep of an angle, decrease -m. This one should
+not need much, and if it does, much above .6 or below .4 is probably too much. .5 is neutral.
+
+4) -f controls the floor. Only adjust his after the tangent looks correct because they affect similar things, but the
+tangent can be inspected visually to be sure it is correct. If it feels like it sits down too hard when stopping and is
+difficult to get it moving at all, increase -f. If it feels like it is skating away and never stops enough, decrease
+-f. You can pass negative values to lower the floor, but if they make the result negative, raw accel will bounce the
+table. This script doesn't check for it.
+'''
 
 import math
 import argparse
@@ -23,11 +54,11 @@ class params_t:
 
 default_params = params_t(
     curve = "symmetric_log",
-    floor = 0.00,
-    limit = 5,
-    limit_rate = 25,
-    sensitivity = 1,
-    crossover = 10,
+    floor = 0.0*-1/25,
+    limit = 0.0,
+    limit_rate = 0.0,
+    sensitivity = 25,
+    crossover = 12,
     nonlinearity = 1.0,
     magnitude = 0.5,
 )
@@ -56,27 +87,27 @@ class curve_symmetric_log_t:
 
     def __call__(self, x):
         # aliases to match graph
+        f = self.floor
         s = self.sensitivity
         c = self.crossover
         n = self.nonlinearity
         m = self.magnitude
-        l = self.limit
+
+        r = 0.5/m
 
         t = n*math.log(x/c)
-        g = -1 if t < 0 else 1
-        h = g*math.pow(math.tanh(math.pow(g*t, 0.5/m)), m/0.5) + 1
-        y = s*((h/2)*(l - 1/l) + 1/l)
+        k = -1 if t < 0 else 1
+        g = (k*math.pow(math.tanh(math.pow(k*t, r)), 1/r) + 1)/2
+        y = g*(s - 1/s) + 1/s + f
 
-        return y
+        return y/s
 
     def __init__(self, params):
+        self.floor = params.floor
         self.sensitivity = params.sensitivity
         self.crossover = params.crossover
         self.nonlinearity = params.nonlinearity
         self.magnitude = params.magnitude
-        self.floor = params.floor
-        self.limit = params.limit
-        self.limit_rate = params.limit_rate
 
 class curve_input_limited_exponential_t:
     limited = True
