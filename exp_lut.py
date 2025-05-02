@@ -114,9 +114,9 @@ class curve_floored_log_t:
 
         r = 0.5/m
 
-        t = n*math.log(x/c)
+        t = math.log(x/c)
         k = -1 if t < 0 else 1
-        g = (k*math.pow(math.tanh(math.pow(k*t, r)), 1/r) + 1)/2
+        g = (k*math.pow(math.tanh(n*math.pow(k*t, r)), 1/r) + 1)/2
         y = g*s + f
 
         return y/s
