@@ -1,34 +1,53 @@
 #! /usr/bin/env python3
 '''
-The graph of the curve is here: https://www.desmos.com/calculator/qkxcxna8sr
+In Advanced->Device Menu settings:
+- check Override defaults
+- uncheck Disable
+- set DPI to 16000
+- set polling rate to 0
 
-The first set of variables there match parameters you pass to the script on the command line, or edit default_params in
-the script itself. This way you can see what happens when you change them. There is also another set of variables with
-mostly random names, but the same order, that define another instance of the curve. You can use them to show your
-current settings as a reference while you change things around.
+Start with the current settings: python exp_lut.py -s 25 -c 12 -m 0.5 -f 0.009
 
-The current default settings are: python exp_lut.py -f 0 -s 25 -c 12 -n 1.0 -m 0.5
-This should be pretty close. A tweak to -s should be all you need. If not, here is a description of each, but moving
-them around on the graph will make this more obvious.
+This should be close. You'll likely have to adjust sensitivity to start, -s. Once that feels usable, keep using it until
+you notice it getting fast too soon or too late, then adjust crossover, -c. The rest are pretty subtle. It'll likely
+take a bit until you notice what they affect enough to adjust them, but when you do, here's how to tune this curve.
 
-1) -s controls max speed, overall. Start here. If it feels too fast, lower -s. If it feels too slow, raise -s. It
-controls magnitude, the how much. This is symmetric in log space, and the outputs range from 1/s to s, so this also
-controls the min speed (1/s).
+tl;dr: -s is how much, -c is how soon, -m is how smooth, -f is how sticky
 
-2) -c controls where the graph switches from minimizing to maximizing. It feels like it controls how soon the
-nonlinearity kicks in; it controls the when. If it feels like it gets too fast too quickly, increase -c. If it feels
-like it takes too long to get going, decrease -c. This moves inversely because it is in the same units as input
-velocity, which puts it in the denominator.
+The graph of the curve is here: https://www.desmos.com/calculator/iwmeivjih6
+You can use it to see your current settings and compare what happens when you change a parameter. The first set of
+variables there match parameters you pass to the script on the command line, or edit in default_params in the script
+itself. These control the purple curve. There is also another set of variables with mostly random names, but the same
+order, that control the orange curve. You can use them to show your current settings in orange as a reference while you
+change purple, then input the purple's settings to the script.
 
-3) -m controls the starting tangent. You want it to just kiss horizontally off the start of the graph, like a parabola.
-If it is laying down too much, increase -m. If it is starting at too steep of an angle, decrease -m. This one should
-not need much, and if it does, much above .6 or below .4 is probably too much. .5 is neutral.
+Proceed in this order. They are ordered broadly by increasing subtlety, but adjusting floor requires correct magnitude.
 
-4) -f controls the floor. Only adjust his after the tangent looks correct because they affect similar things, but the
-tangent can be inspected visually to be sure it is correct. If it feels like it sits down too hard when stopping and is
-difficult to get it moving at all, increase -f. If it feels like it is skating away and never stops enough, decrease
--f. You can pass negative values to lower the floor, but if they make the result negative, raw accel will bounce the
-table. This script doesn't check for it.
+1) Sensitivity, -s, controls how fast fast is. This is a scalar applied to the final result, stretching or squishing
+the whole output. It has nothing to do with curve shape or onset time, just the absolute magnitude. If it feels too
+fast at all speeds, lower -s. If it feels too slow, raise -s.
+
+2) Crossover, -c, controls when fast is fast. This is the speed where the function switches from minimizing to
+maximizing, from scaling down to scaling up. All speeds to the left of this value are slower than 1.0, all to the
+right, faster. It feels like it controls how soon the nonlinearity kicks in. If it feels like it gets too fast too
+quickly, increase -c. If it feels like it takes too long to get going, decrease -c. This moves inversely because it is
+in the same units as input velocity, which puts it in the denominator.
+
+On the graph, crossover ranges from 0 to 1 because all the ways to make it range from 0 to 50 make using the graph more
+difficult. When you go to put the crossover from the graph in the script, multiply it by 50. The graph even has a
+50c entry under c, so you can see the literal value. This is the only value that has this weirdness; the rest are all
+input literally.
+
+3) -m controls the starting tangent. You must use the graph to inspect this visually. Zoom way in. You want it to just
+kiss horizontally off the start of the graph, like a parabola. If it is laying down too much, with an obvious flat
+spot, increase -m. If it is starting at too steep of an angle, decrease -m. This one should not need much, and if it
+does, much above .6 or below .4 is probably too much. .5 is neutral.
+
+4) -f controls the floor, shifting the whole graph up or down. Only adjust this after the tangent looks correct because
+they affect similar things, but the tangent can be inspected visually to be sure it is correct. If it feels like it
+sits down too hard when stopping and is difficult to get it moving at all, increase -f. If it feels like it is skating
+away and never stops enough, decrease -f. The floor should be very small, on the order of .01 for glass, maybe .1 for
+cloth.
 '''
 
 import math
@@ -53,12 +72,12 @@ class params_t:
         self.limit_rate = limit_rate
 
 default_params = params_t(
-    curve = "symmetric_log",
-    floor = 0.0*-1/25,
+    curve = "floored_log",
+    floor = 0.009,
     limit = 0.0,
     limit_rate = 0.0,
     sensitivity = 25,
-    crossover = 12,
+    crossover = 16.6,
     nonlinearity = 1.0,
     magnitude = 0.5,
 )
@@ -82,7 +101,7 @@ def taper_input(t, l, r):
 def floor(t, s, c, f):
     return t*(s*c - f) + f
 
-class curve_symmetric_log_t:
+class curve_floored_log_t:
     limited = True
 
     def __call__(self, x):
@@ -98,7 +117,7 @@ class curve_symmetric_log_t:
         t = n*math.log(x/c)
         k = -1 if t < 0 else 1
         g = (k*math.pow(math.tanh(math.pow(k*t, r)), 1/r) + 1)/2
-        y = g*(s - 1/s) + 1/s + f
+        y = g*s + f
 
         return y/s
 
@@ -736,7 +755,7 @@ def create_arg_parser():
         "input_limited_tapered_tangent_exponential": curve_input_limited_tapered_tangent_exponential_t,
         "input_limited_log": curve_input_limited_log_t,
         "input_limited_exponential": curve_input_limited_exponential_t,
-        "symmetric_log": curve_symmetric_log_t,
+        "floored_log": curve_floored_log_t,
     }
     impl.add_argument('-x', '--curve', choices=curve_choices.keys(), default=default_params.curve)
 
