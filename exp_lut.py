@@ -6,7 +6,7 @@ In Advanced->Device Menu settings:
 - set DPI to 16000
 - set polling rate to 0
 
-Start with the current settings: python exp_lut.py -s 25 -c 12 -m 0.5 -f 0.009
+Start with the current settings: python exp_lut.py -s 50 -c 25 -m 0.5 -f 0.009
 
 This should be close. You'll likely have to adjust sensitivity to start, -s. Once that feels usable, keep using it until
 you notice it getting fast too soon or too late, then adjust crossover, -c. The rest are pretty subtle. It'll likely
@@ -76,8 +76,8 @@ default_params = params_t(
     floor = 0.011,
     limit = 0.0,
     limit_rate = 0.0,
-    sensitivity = 30,
-    crossover = 12,
+    sensitivity = 50,
+    crossover = 25,
     nonlinearity = 1.0,
     magnitude = 0.5,
 )
