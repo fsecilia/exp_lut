@@ -6,7 +6,7 @@ In Advanced->Device Menu settings:
 - set DPI to 16000
 - set polling rate to 0
 
-Start with the current settings: python exp_lut.py -s 50 -c 25 -m 0.5 -f 0.011
+Start with the current settings: python exp_lut.py -s 10 -c 22.5 -m 0.38 -f 0.011
 
 This should be close. You'll likely have to adjust sensitivity to start, -s. Once that feels usable, keep using it until
 you notice it getting fast too soon or too late, then adjust crossover, -c. The rest are pretty subtle. It'll likely
@@ -14,11 +14,11 @@ take a bit until you notice what they affect enough to adjust them, but when you
 
 tl;dr: -s is how much, -c is how soon, -m is how smooth, -f is how sticky
 
-The graph of the curve is here: https://www.desmos.com/calculator/ekle9bv7ia
+The graph of the curve is here: https://www.desmos.com/calculator/kt6yp4zinz
 You can use it to see your current settings and compare what happens when you change a parameter. The first set of
 variables there match parameters you pass to the script on the command line, or edit in default_params in the script
 itself. These control the purple curve. There is also another set of variables with mostly random names, but the same
-order, that control the orange curve. You can use them to show your current settings in orange as a reference while you
+order, that control the green curve. You can use them to show your current settings in green as a reference while you
 change purple, then input the purple's settings to the script.
 
 Proceed in this order. They are ordered broadly by increasing subtlety, but adjusting floor requires correct magnitude.
@@ -73,13 +73,13 @@ class params_t:
 
 default_params = params_t(
     curve = "floored_log",
-    floor = 0.0,
+    floor = 0.011,
     limit = 0.0,
     limit_rate = 0.0,
-    sensitivity = 50,
-    crossover = 35,
-    nonlinearity = 1.0,
-    magnitude = 0.565,
+    sensitivity = 10,
+    crossover = 22.5,
+    nonlinearity = 0.5,
+    magnitude = 0.38,
 )
 
 def logistic(t, r):
