@@ -6,7 +6,8 @@ In Advanced->Device Menu settings:
 - set DPI to 16000
 - set polling rate to 0
 
-Start with the current settings: python exp_lut.py -s 12 -c 16.6 -m 0.493 -f 0.011 -n 0.67
+The graph of the curve is here: https://www.desmos.com/calculator/k7eujr5o1hh
+Start with the current settings: python exp_lut.py -s 12 -c 16.6 -m 0.377 -f 0.011 -n 0.5
 
 This should be close. You'll likely have to adjust sensitivity to start, -s. Once that feels usable, keep using it until
 you notice it getting fast too soon or too late, then adjust crossover, -c. The rest are pretty subtle. It'll likely
@@ -14,7 +15,6 @@ take a bit until you notice what they affect enough to adjust them, but when you
 
 tl;dr: -s is how much, -c is how soon, -m is how smooth, -f is how sticky, -n is new curve to tune
 
-The graph of the curve is here: https://www.desmos.com/calculator/sremh5tn8g
 You can use it to see your current settings and compare what happens when you change a parameter. The first set of
 variables there match parameters you pass to the script on the command line, or edit in default_params in the script
 itself. These control the purple curve. There is also another set of variables with mostly random names, but the same
@@ -86,7 +86,7 @@ class params_t:
 
 default_params = params_t(
     curve = "floored_log",
-    floor = 0.011,
+    floor = 0.0011,
     limit = 0.0,
     limit_rate = 0.0,
     sensitivity = 12,
