@@ -6,13 +6,13 @@ In Advanced->Device Menu settings:
 - set DPI to 16000
 - set polling rate to 0
 
-Start with the current settings: python exp_lut.py -s 10 -c 22.5 -m 0.38 -f 0.011
+Start with the current settings: python exp_lut.py -s 10 -c 16.6 -m 0.409 -n 0.67 -f 0.011
 
 This should be close. You'll likely have to adjust sensitivity to start, -s. Once that feels usable, keep using it until
 you notice it getting fast too soon or too late, then adjust crossover, -c. The rest are pretty subtle. It'll likely
 take a bit until you notice what they affect enough to adjust them, but when you do, here's how to tune this curve.
 
-tl;dr: -s is how much, -c is how soon, -m is how smooth, -f is how sticky
+tl;dr: -s is how much, -c is how soon, -m is how smooth, -f is how sticky, -n is new curve to tune
 
 The graph of the curve is here: https://www.desmos.com/calculator/kt6yp4zinz
 You can use it to see your current settings and compare what happens when you change a parameter. The first set of
@@ -38,16 +38,28 @@ difficult. When you go to put the crossover from the graph in the script, multip
 50c entry under c, so you can see the literal value. This is the only value that has this weirdness; the rest are all
 input literally.
 
-3) -m controls the starting tangent. You must use the graph to inspect this visually. Zoom way in. You want it to just
-kiss horizontally off the start of the graph, like a parabola. If it is laying down too much, with an obvious flat
-spot, increase -m. If it is starting at too steep of an angle, decrease -m. This one should not need much, and if it
-does, much above .6 or below .4 is probably too much. .5 is neutral.
+3) -m is technically magnitude, but I hijacked it to be controls the starting tangent. Now the name is bad, but -m
+definitely controls the tangent.
+
+You must use the desmos graph to inspect this visually, and you must undo the 10y:1x zoom applied to match the raw_accel
+ui. Click the wrench in the top right. This pops a menu with a clicky "Zoom Square" if it is not already square.
+
+Zoom way in to the curve at x=0. Horizontaly, you want it to just kiss off the start of the graph, like a parabola. If
+it is laying down too much, with an obvious flat spot, increase -m. If it is starting at too steep of an angle,
+decrease -m. This one should not need much. 0.5 is neutral. At n=1, much above .6 or below .4 is probably too much.
+When n<1, -m should be lower. When n>1, -m should be higher.
 
 4) -f controls the floor, shifting the whole graph up or down. Only adjust this after the tangent looks correct because
 they affect similar things, but the tangent can be inspected visually to be sure it is correct. If it feels like it
 sits down too hard when stopping and is difficult to get it moving at all, increase -f. If it feels like it is skating
 away and never stops enough, decrease -f. The floor should be very small, on the order of .01 for glass, maybe .1 for
 cloth.
+
+5) -n changes the entire shape nonlinearly, increasing the scale of the log before running through the logistic. This
+is the real meat of the curve, and it interacts with all of the other parameters, particularly -m. If you change that
+by much, you're basically tuning a new curve and you'll have to adjust everything else again. If you change it by a
+little, though, it is an easy way to adjust the initial pickup. This is the bit of the graph after you get out of the
+adjusted tangent, but before it starts taking off after the crossover.
 '''
 
 import math
@@ -77,9 +89,9 @@ default_params = params_t(
     limit = 0.0,
     limit_rate = 0.0,
     sensitivity = 10,
-    crossover = 22.5,
-    nonlinearity = 0.5,
-    magnitude = 0.38,
+    crossover = 16.6,
+    nonlinearity = 0.67,
+    magnitude = 0.409,
 )
 
 def logistic(t, r):
