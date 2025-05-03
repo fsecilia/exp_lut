@@ -14,7 +14,7 @@ take a bit until you notice what they affect enough to adjust them, but when you
 
 tl;dr: -s is how much, -c is how soon, -m is how smooth, -f is how sticky, -n is new curve to tune
 
-The graph of the curve is here: https://www.desmos.com/calculator/kt6yp4zinz
+The graph of the curve is here: https://www.desmos.com/calculator/yb4jauuopz
 You can use it to see your current settings and compare what happens when you change a parameter. The first set of
 variables there match parameters you pass to the script on the command line, or edit in default_params in the script
 itself. These control the purple curve. There is also another set of variables with mostly random names, but the same
