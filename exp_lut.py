@@ -6,7 +6,7 @@ In Advanced->Device Menu settings:
 - set DPI to 16000
 - set polling rate to 0
 
-Start with the current settings: python exp_lut.py -s 10 -c 16.6 -m 0.409 -n 0.67 -f 0.011
+Start with the current settings: python exp_lut.py -s 12 -c 16.6 -m 0.416 -f 0.011 -n 0.67
 
 This should be close. You'll likely have to adjust sensitivity to start, -s. Once that feels usable, keep using it until
 you notice it getting fast too soon or too late, then adjust crossover, -c. The rest are pretty subtle. It'll likely
@@ -43,20 +43,24 @@ and I should change it to -t. -m definitely controls the tangent.
 
 You must use the desmos graph to inspect this visually. The tangent is a thin orange line. If the graph is already
 tangent, you may not see it, so wiggle the m slider until you do. You want to find the value of -m where it just
-barely lays down horizontal. That is neutral. If it feels to jerky off the start, decrease -m and it will lay down some.
-If it feels too smooth, like it stays at a min speed for too long, increase -m and it will lift.
+barely lays down horizontal. That is neutral. If it seems to jerk off the start, decrease -m and it will lay down some.
+If it feels limited at a min speed for too long, increase -m and it will lift.
 
 4) -f controls the floor, shifting the whole graph up or down. Only adjust this after the tangent looks correct because
 they affect similar things, but the tangent can be inspected visually to be sure it is correct. If it feels like it
 sits down too hard when stopping and is difficult to get it moving at all, increase -f. If it feels like it is skating
-away and never stops enough, decrease -f. The floor should be very small, on the order of .01 for glass, maybe .1 for
-cloth.
+away and never stops enough, decrease -f. The floor should be very small, on the order of .01.
 
-5) -n changes the entire shape nonlinearly, increasing the scale of the log before running through the logistic. This
-is the real meat of the curve, and it interacts with all of the other parameters, particularly -m. If you change that
-by much, you're basically tuning a new curve and you'll have to adjust everything else again. If you change it by a
-little, though, it is an easy way to adjust the initial pickup. This is the bit of the graph after you get out of the
-adjusted tangent, but before it starts taking off after the crossover.
+5) -n, nonlinearity, changes the entire shape, controlling the scale of the log of the ratio of x to the crossover
+before running it all through the logistic. This is the real meat of the curve, and it interacts with all of the other
+parameters, particularly -m. If you change -n by much, you're basically tuning a new curve and you'll have to adjust
+everything else again. So set s, c, m, and f to neutral, (s=1, c=25, m=0.5, f=0, respectively), pick a new n, then
+start the tune from scratch. For n < 1, the curve naturally has no initial tangent, so you'll really have to get on -m
+to force one out.
+
+If you change it by a little, though, it is an easy way to adjust the initial pickup. This is the bit of the graph
+after you get out of the adjusted tangent, but before it starts taking off after the crossover. If you feel it dragging
+after it just starts moving, decrease n.
 '''
 
 import math
@@ -85,10 +89,10 @@ default_params = params_t(
     floor = 0.011,
     limit = 0.0,
     limit_rate = 0.0,
-    sensitivity = 10,
+    sensitivity = 12,
     crossover = 16.6,
     nonlinearity = 0.67,
-    magnitude = 0.35,
+    magnitude = 0.413,
 )
 
 def logistic(t, r):
