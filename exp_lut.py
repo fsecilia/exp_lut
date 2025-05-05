@@ -691,12 +691,14 @@ class output_raw_accel_t:
         self.generator = generator
         self.sampler = sampler_curvature_t(table_size/output_raw_accel_t.num_samples)
 
-# libinput supports up to 64 uniformly-spaced samples, but this includes 0.
+# libinput supports up to 64 uniformly-spaced samples with no implicit starting point. We start it at 0 to match raw
+# accel, so it really has 63 samples. It loses all nuance at the tangent.
 class output_libinput_t:
     num_samples = 63
-    motion_step = (table_size/(num_samples + 1))/2
+    motion_step = table_size/num_samples
 
     def on_begin(self):
+        print(f"{output_libinput_t.motion_step}")
         print("0 ", end="")
 
     def on_end(self):
@@ -706,8 +708,8 @@ class output_libinput_t:
         x = self.sampler(t)
         y = self.generator(x)
 
-        y *= output_libinput_t.motion_step
-        y *= x
+        y *= x/output_libinput_t.motion_step
+        y /= 2
 
         print(f"{y:.24f} ", end="")
 
