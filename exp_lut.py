@@ -89,10 +89,10 @@ default_params = params_t(
     floor = 0.0,
     limit = 0.0,
     limit_rate = 0.0,
-    sensitivity = 10,
-    crossover = 16.6,
-    nonlinearity = 0.69,
-    magnitude = 0.413,
+    sensitivity = 18.1,
+    crossover = 25.0,
+    nonlinearity = 1.0,
+    magnitude = 0.5,
 )
 
 def logistic(t, r):
