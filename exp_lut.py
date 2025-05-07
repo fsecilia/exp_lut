@@ -1,67 +1,4 @@
 #! /usr/bin/env python3
-'''
-In Advanced->Device Menu settings:
-- check Override defaults
-- uncheck Disable
-- set DPI to 16000
-- set polling rate to 0
-
-The graph of the curve is here: https://www.desmos.com/calculator/k7eujr5o1hh
-Start with the current settings: python exp_lut.py -s 12 -c 16.6 -m 0.377 -f 0.011 -n 0.5
-
-This should be close. You'll likely have to adjust sensitivity to start, -s. Once that feels usable, keep using it until
-you notice it getting fast too soon or too late, then adjust crossover, -c. The rest are pretty subtle. It'll likely
-take a bit until you notice what they affect enough to adjust them, but when you do, here's how to tune this curve.
-
-tl;dr: -s is how much, -c is how soon, -m is how smooth, -f is how sticky, -n is new curve to tune
-
-You can use it to see your current settings and compare what happens when you change a parameter. The first set of
-variables there match parameters you pass to the script on the command line, or edit in default_params in the script
-itself. These control the purple curve. There is also another set of variables with mostly random names, but the same
-order, that control the green curve. You can use them to show your current settings in green as a reference while you
-change purple, then input the purple's settings to the script.
-
-Proceed in this order.
-
-1) Sensitivity, -s, controls how fast fast is. This is a scalar applied to the final result, stretching or squishing
-the whole output. It has nothing to do with curve shape or onset time, just the absolute magnitude. If it feels too
-fast at all speeds, lower -s. If it feels too slow, raise -s.
-
-2) Crossover, -c, controls when fast is fast. This is the speed where the function switches from minimizing to
-maximizing, from scaling down to scaling up. All speeds to the left of this value are slower than 1.0, all to the
-right, faster. It feels like it controls how soon the nonlinearity kicks in. If it feels like it gets too fast too
-quickly, increase -c. If it feels like it takes too long to get going, decrease -c. This moves inversely because it is
-in the same units as input velocity, which puts it in the denominator.
-
-On the graph, crossover ranges from 0 to 1 because all the ways to make it range from 0 to 50 make using the graph more
-difficult. When you go to put the crossover from the graph in the script, multiply it by 50. The graph even has a
-50c entry under c, so you can see the literal value. This is the only value that has this weirdness; the rest are all
-input literally.
-
-3) -m is technically magnitude, but I hijacked it to control the starting tangent a long time ago. Now the name is bad,
-and I should change it to -t. -m definitely controls the tangent.
-
-You must use the desmos graph to inspect this visually. The tangent is a thin orange line. If the graph is already
-tangent, you may not see it, so wiggle the m slider until you do. You want to find the value of -m where it just
-barely lays down horizontal. That is neutral. If it seems to jerk off the start, decrease -m and it will lay down some.
-If it feels limited at a min speed for too long, increase -m and it will lift.
-
-4) -f controls the floor, shifting the whole graph up or down. Only adjust this after the tangent looks correct because
-they affect similar things, but the tangent can be inspected visually to be sure it is correct. If it feels like it
-sits down too hard when stopping and is difficult to get it moving at all, increase -f. If it feels like it is skating
-away and never stops enough, decrease -f. The floor should be very small, on the order of .01.
-
-5) -n, nonlinearity, changes the entire shape, controlling the scale of the log of the ratio of x to the crossover
-before running it all through the logistic. This is the real meat of the curve, and it interacts with all of the other
-parameters, particularly -m. If you change -n by much, you're basically tuning a new curve and you'll have to adjust
-everything else again. So set s, c, m, and f to neutral, (s=1, c=25, m=0.5, f=0, respectively), pick a new n, then
-start the tune from scratch. For n < 1, the curve naturally has no initial tangent, so you'll really have to get on -m
-to force one out.
-
-If you change it by a little, though, it is an easy way to adjust the initial pickup. This is the bit of the graph
-after you get out of the adjusted tangent, but before it starts taking off after the crossover. If you feel it dragging
-after it just starts moving, decrease n.
-'''
 
 import math
 import argparse
@@ -85,14 +22,14 @@ class params_t:
         self.limit_rate = limit_rate
 
 default_params = params_t(
-    curve = "floored_log",
-    floor = 0.0,
+    curve = "floored_softplus",
+    floor = 0.005,
     limit = 0.0,
     limit_rate = 0.0,
-    sensitivity = 18.1,
-    crossover = 25.0,
-    nonlinearity = 1.0,
-    magnitude = 0.5,
+    sensitivity = 10,
+    crossover = 0.5*50,
+    nonlinearity = 5.5,
+    magnitude = 1,
 )
 
 def logistic(t, r):
@@ -113,6 +50,24 @@ def taper_input(t, l, r):
 
 def floor(t, s, c, f):
     return t*(s*c - f) + f
+
+# floored smooth ramp: (s/n)log((1 + e^nm(x - c))/(1 + e^-nmc)) + f
+class curve_floored_softplus_t:
+    limited = True
+
+    def __call__(self, x):
+        f = self.floor
+        s = self.sensitivity
+        c = self.crossover
+        n = self.nonlinearity
+
+        return (s/n)*math.log((1 + math.exp(n*(x - c)))/(1 + math.exp(-n*c))) + f
+
+    def __init__(self, params):
+        self.floor = params.floor
+        self.sensitivity = params.sensitivity
+        self.crossover = params.crossover
+        self.nonlinearity = params.nonlinearity
 
 # d/dx(1/2 (tanh(n log^r(x/c))^(1/r) + 1)) = (n log^(r - 1)(x/c) tanh^(1/r - 1)(n log^r(x/c)) sech^2(n log^r(x/c)))/(2 x)
 class curve_floored_log_t:
@@ -772,6 +727,7 @@ def create_arg_parser():
         "input_limited_log": curve_input_limited_log_t,
         "input_limited_exponential": curve_input_limited_exponential_t,
         "floored_log": curve_floored_log_t,
+        "floored_softplus": curve_floored_softplus_t,
     }
     impl.add_argument('-x', '--curve', choices=curve_choices.keys(), default=default_params.curve)
 
