@@ -22,14 +22,14 @@ class params_t:
         self.limit_rate = limit_rate
 
 default_params = params_t(
-    curve = "floored_softplus",
-    floor = 0.005,
+    curve = "floored_log",
+    floor = 0.0,
     limit = 0.0,
     limit_rate = 0.0,
-    sensitivity = 10,
-    crossover = 0.5*50,
-    nonlinearity = 5.5,
-    magnitude = 1,
+    sensitivity = 25.0,
+    crossover = 25.0,
+    nonlinearity = 0.95,
+    magnitude = 0.0,
 )
 
 def logistic(t, r):
@@ -69,7 +69,6 @@ class curve_floored_softplus_t:
         self.crossover = params.crossover
         self.nonlinearity = params.nonlinearity
 
-# d/dx(1/2 (tanh(n log^r(x/c))^(1/r) + 1)) = (n log^(r - 1)(x/c) tanh^(1/r - 1)(n log^r(x/c)) sech^2(n log^r(x/c)))/(2 x)
 class curve_floored_log_t:
     limited = True
 
@@ -81,11 +80,11 @@ class curve_floored_log_t:
         n = self.nonlinearity
         m = self.magnitude
 
-        r = 0.5/m
+        r = m + 1
 
         t = math.log(x/c)
         k = -1 if t < 0 else 1
-        g = (k*math.pow(math.tanh(math.pow(n*k*t, r)), 1/r) + 1)/2
+        g = (k*math.pow(math.tanh(math.pow(n*k*t, 1/r)), r) + 1)/2
         y = g*s + f
 
         return y/s
