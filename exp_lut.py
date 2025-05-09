@@ -26,9 +26,9 @@ default_params = params_t(
     floor = 0.0,
     limit = 0.0,
     limit_rate = 0.0,
-    sensitivity = 50.0,
+    sensitivity = 25.0,
     crossover = 25.0,
-    nonlinearity = 0.9,
+    nonlinearity = 0.95,
     magnitude = 0.0,
 )
 
