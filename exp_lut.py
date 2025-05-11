@@ -23,13 +23,13 @@ class params_t:
 
 default_params = params_t(
     curve = "floored_log",
-    floor = 0.0,
+    floor = 0.009,
     limit = 0.0,
     limit_rate = 0.0,
-    sensitivity = 25.0,
-    crossover = 25.0,
-    nonlinearity = 0.95,
-    magnitude = 0.0,
+    sensitivity = 30.0,
+    crossover = 30.0,
+    nonlinearity = 1.2,
+    magnitude = -0.144,
 )
 
 def logistic(t, r):
@@ -82,12 +82,12 @@ class curve_floored_log_t:
 
         r = m + 1
 
-        t = math.log(x/c)
+        t = n*math.log(x/c)
         k = -1 if t < 0 else 1
-        g = (k*math.pow(math.tanh(math.pow(n*k*t, 1/r)), r) + 1)/2
-        y = g*s + f
+        g = (k*math.pow(math.tanh(math.pow(k*t, r)), 1/r) + 1)/2
+        y = g + f/s
 
-        return y/s
+        return y
 
     def __init__(self, params):
         self.floor = params.floor
