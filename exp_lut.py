@@ -23,7 +23,7 @@ class params_t:
 
 default_params = params_t(
     curve = "floored_log",
-    floor = 0.009,
+    floor = 0.001,
     limit = 0.0,
     limit_rate = 0.0,
     sensitivity = 30.0,
