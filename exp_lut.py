@@ -22,17 +22,44 @@ class params_t:
         self.limit_rate = limit_rate
 
 default_params = params_t(
-    curve = "reverse_gaussian",
+    curve = "reverse_gaussian_log",
     floor = 0.0,
     limit = 0.0,
     limit_rate = 0.0,
     sensitivity = 25.0,
-    crossover = 25,
-    nonlinearity = 1.0,
-    magnitude = 0.15,
+    crossover = 50*1.5,
+    nonlinearity = 5.0,
+    magnitude = 1.0,
 )
 
+# same as reverse gaussian, but of the log
+# http://desmos.com/calculator/fn4a93seke
+class curve_reverse_gaussian_log_t:
+    limited = True
+
+    def __call__(self, x):
+        f = self.floor
+        o = self.sensitivity
+        i = self.crossover
+        n = self.nonlinearity
+        m = self.magnitude
+
+        a = o
+        b = n/m
+        c = i
+        d = m
+
+        return (a*(1 - math.exp(-b*math.pow(math.log(c*x + 1), 2*d))) + f)/o
+
+    def __init__(self, params):
+        self.floor = params.floor
+        self.sensitivity = params.sensitivity
+        self.crossover = params.crossover
+        self.nonlinearity = params.nonlinearity
+        self.magnitude = params.magnitude
+
 # gaussian, but flipped vertically so the center of the bell is at (0, 0)
+# http://desmos.com/calculator/fn4a93seke
 class curve_reverse_gaussian_t:
     limited = True
 
@@ -44,14 +71,11 @@ class curve_reverse_gaussian_t:
         m = self.magnitude
 
         a = o
-        b = math.pow(10, 10*m)
+        b = n/m
         c = i
         d = n
 
-        s = -1 if c*x < 0 else 1
-        t = s*math.pow(s*c*x, 2*d)
-
-        return (a*(1 - math.exp(-b*t)) + f)/o
+        return (a*(1 - math.exp(-b*math.pow(c*x, 2*d))) + f)/o
 
     def __init__(self, params):
         self.floor = params.floor
@@ -97,6 +121,7 @@ class curve_floored_softplus_t:
         self.crossover = params.crossover
         self.nonlinearity = params.nonlinearity
 
+# log run through the logistic
 class curve_floored_log_t:
     limited = True
 
@@ -756,6 +781,7 @@ def create_arg_parser():
         "floored_log": curve_floored_log_t,
         "floored_softplus": curve_floored_softplus_t,
         "reverse_gaussian": curve_reverse_gaussian_t,
+        "reverse_gaussian_log": curve_reverse_gaussian_log_t,
     }
     impl.add_argument('-x', '--curve', choices=curve_choices.keys(), default=default_params.curve)
 
