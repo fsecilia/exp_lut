@@ -22,15 +22,43 @@ class params_t:
         self.limit_rate = limit_rate
 
 default_params = params_t(
-    curve = "floored_log",
-    floor = 0.0001,
+    curve = "reverse_gaussian",
+    floor = 0.0,
     limit = 0.0,
     limit_rate = 0.0,
-    sensitivity = 32.0,
-    crossover = 32.0,
-    nonlinearity = 1.28,
-    magnitude = -0.2,
+    sensitivity = 25.0,
+    crossover = 25,
+    nonlinearity = 1.0,
+    magnitude = 0.15,
 )
+
+# gaussian, but flipped vertically so the center of the bell is at (0, 0)
+class curve_reverse_gaussian_t:
+    limited = True
+
+    def __call__(self, x):
+        f = self.floor
+        o = self.sensitivity
+        i = self.crossover
+        n = self.nonlinearity
+        m = self.magnitude
+
+        a = o
+        b = math.pow(10, 10*m)
+        c = i
+        d = n
+
+        s = -1 if c*x < 0 else 1
+        t = s*math.pow(s*c*x, 2*d)
+
+        return (a*(1 - math.exp(-b*t)) + f)/o
+
+    def __init__(self, params):
+        self.floor = params.floor
+        self.sensitivity = params.sensitivity
+        self.crossover = params.crossover
+        self.nonlinearity = params.nonlinearity
+        self.magnitude = params.magnitude
 
 def logistic(t, r):
     sign = -1 if t < 0 else 1
@@ -727,6 +755,7 @@ def create_arg_parser():
         "input_limited_exponential": curve_input_limited_exponential_t,
         "floored_log": curve_floored_log_t,
         "floored_softplus": curve_floored_softplus_t,
+        "reverse_gaussian": curve_reverse_gaussian_t,
     }
     impl.add_argument('-x', '--curve', choices=curve_choices.keys(), default=default_params.curve)
 
