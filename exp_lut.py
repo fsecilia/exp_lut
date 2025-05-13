@@ -23,13 +23,13 @@ class params_t:
 
 default_params = params_t(
     curve = "floored_log",
-    floor = 0.0,
+    floor = 0.0001,
     limit = 0.0,
     limit_rate = 0.0,
     sensitivity = 32.0,
     crossover = 32.0,
-    nonlinearity = 1.05,
-    magnitude = -0.15,
+    nonlinearity = 1.28,
+    magnitude = -0.2,
 )
 
 def logistic(t, r):
