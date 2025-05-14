@@ -7,7 +7,7 @@ table_size = 50
 
 # (x + 1)^(n*ln(x + 1)) - 1
 # x*ln(x + 1)
-# sxe^(sign(ln(x/c))abs(ln(x/c))^n) starts of flat, grows quickly, flattens out near crossover to s, then grows quickly again.
+# sxe^(sign(ln(x/c))abs(ln(x/c))^n) starts off flat, grows quickly, flattens out near crossover to s, then grows quickly again.
 
 class params_t:
     def __init__(self, curve, sensitivity, crossover, nonlinearity, magnitude, floor,
@@ -26,16 +26,17 @@ default_params = params_t(
     floor = 0.0,
     limit = 0.0,
     limit_rate = 0.0,
-    sensitivity = 25.0,
-    crossover = 50*1.5,
+    sensitivity = 10.0,
+    crossover = 50*2.5,
     nonlinearity = 5.0,
-    magnitude = 1.0,
+    magnitude = 4/3,
 )
 
 # same as reverse gaussian, but of the log
 # http://desmos.com/calculator/fn4a93seke
 class curve_reverse_gaussian_log_t:
     limited = True
+    apply_sensitivity = False
 
     def __call__(self, x):
         f = self.floor
@@ -49,7 +50,7 @@ class curve_reverse_gaussian_log_t:
         c = i
         d = m
 
-        return (a*(1 - math.exp(-b*math.pow(math.log(c*x + 1), 2*d))) + f)/o
+        return a*(1 - math.exp(-b*math.pow(math.log(c*x + 1), 2*d))) + f
 
     def __init__(self, params):
         self.floor = params.floor
@@ -625,7 +626,8 @@ class generator_t:
     def __call__(self, x):
         unlimited = self.curve(x)
         limited = self.limiter(unlimited)
-        return self.sensitivity*limited
+        if not hasattr(self.curve, "apply_sensitivity") or self.curve.apply_sensitivity: limited *= self.sensitivity
+        return limited
 
     def __init__(self, curve, limiter, sensitivity):
         self.curve = curve
@@ -688,9 +690,8 @@ class output_raw_accel_t:
         x = self.sampler(t)
         y = self.generator(x)
 
-        y *= x
-        y *= table_size
         x *= table_size
+        y *= x
 
         print(f"{x:.24f},{y:.24f};")
 
