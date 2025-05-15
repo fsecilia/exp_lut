@@ -28,7 +28,7 @@ default_params = params_t(
     limit_rate = 0.0,
     sensitivity = 10.0,
     crossover = 50*1.0,
-    nonlinearity = 1.0,
+    nonlinearity = 0.7,
     magnitude = -0.2,
 )
 
@@ -45,16 +45,10 @@ class curve_gaussian_log_t:
         m = self.magnitude
 
         a = o
-
-        # b = n/(m+1)
-        # \frac{1}{i}\left(\frac{n}{m+1}\right)^{-\frac{1}{2\left(m+1\right)}}
-        b = (1/i)*math.pow(n/(m + 1), -1/(2*(m + 1)))
-
+        b = n/(m+1)
         c = i
         d = m + 1
-
         s = 1.0 if math.log(c*x) < 0 else 1.0
-
         return a*math.exp(-(b/2)*math.pow(s*math.fabs(math.log(c*x)), 2*d)) + f
 
     def __init__(self, params):
@@ -690,7 +684,7 @@ class limiter_null_t:
 
 # chooses sample locations based on curvature
 class sampler_curvature_t:
-    sample_density = 1.5
+    sample_density = 3
 
     def __call__(self, t):
         # The curve should have more samples where the sensitivity changes most. For now, just oversample small t,
