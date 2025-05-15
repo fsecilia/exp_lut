@@ -22,14 +22,14 @@ class params_t:
         self.limit_rate = limit_rate
 
 default_params = params_t(
-    curve = "reverse_gaussian_log",
-    floor = 0.0,
+    curve = "gaussian_log",
+    floor = 1e-10,
     limit = 0.0,
     limit_rate = 0.0,
     sensitivity = 10.0,
-    crossover = 50*1.25,
-    nonlinearity = 7.2,
-    magnitude = 0.95,
+    crossover = 50*1.0,
+    nonlinearity = 1.0,
+    magnitude = -0.2,
 )
 
 # gaussian of the log. this runs the whole negative portion of log through the gaussian
@@ -45,11 +45,17 @@ class curve_gaussian_log_t:
         m = self.magnitude
 
         a = o
-        b = n/m
-        c = i
-        d = m
 
-        return a*math.exp(-(b/2)*math.pow(math.log(c*x), 2*d)) + f
+        # b = n/(m+1)
+        # \frac{1}{i}\left(\frac{n}{m+1}\right)^{-\frac{1}{2\left(m+1\right)}}
+        b = (1/i)*math.pow(n/(m + 1), -1/(2*(m + 1)))
+
+        c = i
+        d = m + 1
+
+        s = 1.0 if math.log(c*x) < 0 else 1.0
+
+        return a*math.exp(-(b/2)*math.pow(s*math.fabs(math.log(c*x)), 2*d)) + f
 
     def __init__(self, params):
         self.floor = params.floor
@@ -810,7 +816,7 @@ def create_arg_parser():
         "floored_softplus": curve_floored_softplus_t,
         "reverse_gaussian": curve_reverse_gaussian_t,
         "reverse_gaussian_log": curve_reverse_gaussian_log_t,
-        "gaussian_log_t": curve_gaussian_log_t,
+        "gaussian_log": curve_gaussian_log_t,
     }
     impl.add_argument('-x', '--curve', choices=curve_choices.keys(), default=default_params.curve)
 
