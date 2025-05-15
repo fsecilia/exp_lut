@@ -27,12 +27,38 @@ default_params = params_t(
     limit = 0.0,
     limit_rate = 0.0,
     sensitivity = 10.0,
-    crossover = 50*2.5,
-    nonlinearity = 5.0,
-    magnitude = 4/3,
+    crossover = 50*1.25,
+    nonlinearity = 7.2,
+    magnitude = 0.95,
 )
 
-# same as reverse gaussian, but of the log
+# gaussian of the log. this runs the whole negative portion of log through the gaussian
+class curve_gaussian_log_t:
+    limited = True
+    apply_sensitivity = False
+
+    def __call__(self, x):
+        f = self.floor
+        o = self.sensitivity
+        i = self.crossover
+        n = self.nonlinearity
+        m = self.magnitude
+
+        a = o
+        b = n/m
+        c = i
+        d = m
+
+        return a*math.exp(-(b/2)*math.pow(math.log(c*x), 2*d)) + f
+
+    def __init__(self, params):
+        self.floor = params.floor
+        self.sensitivity = params.sensitivity
+        self.crossover = params.crossover
+        self.nonlinearity = params.nonlinearity
+        self.magnitude = params.magnitude
+
+# same as reverse gaussian, but of the log starting at 1
 # http://desmos.com/calculator/fn4a93seke
 class curve_reverse_gaussian_log_t:
     limited = True
@@ -63,6 +89,7 @@ class curve_reverse_gaussian_log_t:
 # http://desmos.com/calculator/fn4a93seke
 class curve_reverse_gaussian_t:
     limited = True
+    apply_sensitivity = False
 
     def __call__(self, x):
         f = self.floor
@@ -76,7 +103,7 @@ class curve_reverse_gaussian_t:
         c = i
         d = n
 
-        return (a*(1 - math.exp(-b*math.pow(c*x, 2*d))) + f)/o
+        return a*(1 - math.exp(-b*math.pow(c*x, 2*d))) + f
 
     def __init__(self, params):
         self.floor = params.floor
@@ -783,6 +810,7 @@ def create_arg_parser():
         "floored_softplus": curve_floored_softplus_t,
         "reverse_gaussian": curve_reverse_gaussian_t,
         "reverse_gaussian_log": curve_reverse_gaussian_log_t,
+        "gaussian_log_t": curve_gaussian_log_t,
     }
     impl.add_argument('-x', '--curve', choices=curve_choices.keys(), default=default_params.curve)
 
