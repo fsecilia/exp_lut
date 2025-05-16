@@ -23,16 +23,18 @@ class params_t:
 
 default_params = params_t(
     curve = "gaussian_log",
-    floor = 1e-10,
+    floor = 1e-12,
     limit = 0.0,
     limit_rate = 0.0,
-    sensitivity = 12.5,
-    crossover = 50*1.0,
-    nonlinearity = 0.935,
-    magnitude = -0.2,
+    sensitivity = 10.0,
+    crossover = 50*0.5,
+    nonlinearity = 1.95,
+    magnitude = 0.0
 )
 
 # gaussian of the log. this runs the whole negative portion of log through the gaussian
+# it has a kink when m < 1, but I haven't needed to change m
+# https://www.desmos.com/calculator/3aqlfgukal
 class curve_gaussian_log_t:
     limited = True
     apply_sensitivity = False
@@ -44,12 +46,35 @@ class curve_gaussian_log_t:
         n = self.nonlinearity
         m = self.magnitude
 
-        a = o
-        b = n/(m+1)
-        c = i
-        d = m + 1
-        s = 1.0 if math.log(c*x) < 0 else 1.0
-        return a*math.exp(-(b/2)*math.pow(s*math.fabs(math.log(c*x)), 2*d)) + f
+        y = o*math.exp(-(1/(2*n*(m+1))*math.pow(math.fabs(math.log(n*i*x)), 2*(m + 1))))
+
+        # The gaussian in the composition curves back towards 0 after hitting max, which breaks monotonicity.
+        # Hold hoizontal after max. This gets weird when m < ~0.8.
+        if 1/(n*i) < x: y = o
+
+        return y + f
+
+    '''
+    This is a new parameterization, really laying into the composition. It should produce the same results for the
+    default set of parameters. It does not right now.
+    def __call__(self, x):
+        f = self.floor
+        o = self.sensitivity
+        i = self.crossover
+        m = self.magnitude
+
+        # The gaussian in the composition curves back towards 0 after hitting max, which breaks monotonicity.
+        # Hold hoizontal after the peak at p.
+        p = 1/(i*m)
+        peaked = x >= p
+        if peaked:
+            return o + f
+
+        f = math.pow(m, -1/2)*math.log(i*m*x)
+        g = math.exp(-f*f/2)
+        h = o*g
+        return h + f
+    '''
 
     def __init__(self, params):
         self.floor = params.floor
