@@ -23,64 +23,47 @@ class params_t:
 
 default_params = params_t(
     curve = "gaussian_log",
-    floor = 1e-12,
+    floor = 1e-13,
     limit = 0.0,
     limit_rate = 0.0,
     sensitivity = 10.0,
-    crossover = 50*0.5,
-    nonlinearity = 1.95,
-    magnitude = 0.0
+    crossover = 50*1.0,
+    nonlinearity = 0.0,
+    magnitude = 1.387
 )
 
-# gaussian of the log. this runs the whole negative portion of log through the gaussian
-# it has a kink when m < 1, but I haven't needed to change m
-# https://www.desmos.com/calculator/3aqlfgukal
+# Gaussian of the log. This runs the whole negative portion of log through the gaussian. It picks up very quickly,
+# but this feels more transparent than fast.
+# https://www.desmos.com/calculator/u885nclgq7
 class curve_gaussian_log_t:
     limited = True
     apply_sensitivity = False
 
+    def f0(x, o, i, m):
+        t = math.log(i*x)
+        return o*math.exp(-t*t/(2*m*m))
+
+    def f1(x, o, i, m):
+        return -curve_gaussian_log_t.f0(x, o, i, m)*math.log(i*x)/(m*m*x)
+
     def __call__(self, x):
         f = self.floor
         o = self.sensitivity
         i = self.crossover
-        n = self.nonlinearity
         m = self.magnitude
 
-        y = o*math.exp(-(1/(2*n*(m+1))*math.pow(math.fabs(math.log(n*i*x)), 2*(m + 1))))
-
-        # The gaussian in the composition curves back towards 0 after hitting max, which breaks monotonicity.
-        # Hold hoizontal after max. This gets weird when m < ~0.8.
-        if 1/(n*i) < x: y = o
+        p = 1/i
+        if x < p:
+            y = curve_gaussian_log_t.f0(x, o, i, m)
+        else:
+            y = (x - p)*curve_gaussian_log_t.f1(p, o, i, m) + curve_gaussian_log_t.f0(p, o, i, m)
 
         return y + f
-
-    '''
-    This is a new parameterization, really laying into the composition. It should produce the same results for the
-    default set of parameters. It does not right now.
-    def __call__(self, x):
-        f = self.floor
-        o = self.sensitivity
-        i = self.crossover
-        m = self.magnitude
-
-        # The gaussian in the composition curves back towards 0 after hitting max, which breaks monotonicity.
-        # Hold hoizontal after the peak at p.
-        p = 1/(i*m)
-        peaked = x >= p
-        if peaked:
-            return o + f
-
-        f = math.pow(m, -1/2)*math.log(i*m*x)
-        g = math.exp(-f*f/2)
-        h = o*g
-        return h + f
-    '''
 
     def __init__(self, params):
         self.floor = params.floor
         self.sensitivity = params.sensitivity
         self.crossover = params.crossover
-        self.nonlinearity = params.nonlinearity
         self.magnitude = params.magnitude
 
 # same as reverse gaussian, but of the log starting at 1
