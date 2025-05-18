@@ -29,7 +29,7 @@ default_params = params_t(
     sensitivity = 10.0,
     crossover = 50*1.0,
     nonlinearity = 0.0,
-    magnitude = 1.387
+    magnitude = 1.5,
 )
 
 # Gaussian of the log. This runs the whole negative portion of log through the gaussian. It picks up very quickly,
@@ -692,13 +692,20 @@ class limiter_null_t:
 
 # chooses sample locations based on curvature
 class sampler_curvature_t:
-    sample_density = 3
+    sample_density = 5.2
 
     def __call__(self, t):
         # The curve should have more samples where the sensitivity changes most. For now, just oversample small t,
-        # since the information there is more important. The change in sensitivity is the derivative of the whole
+        # since the information there is more important. The change in sensitivity is the 3rd derivative of the composed
         # function, including limiting, which isn't trivial enough to bother with yet.
-        return (math.exp(math.pow(t, sampler_curvature_t.sample_density)) - 1)/(math.exp(1) - 1)
+
+        # e^(t^s - 1)/(e - 1)
+        # return (math.exp(math.pow(t, sampler_curvature_t.sample_density)) - 1)/(math.exp(1) - 1)
+
+        # e^(t^s - 1)t^s
+        p = math.pow(t, sampler_curvature_t.sample_density)
+        return math.exp(p - 1)*p
+
 
     def __init__(self, num_samples):
         self.num_samples = num_samples
