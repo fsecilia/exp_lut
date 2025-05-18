@@ -5,25 +5,23 @@ import argparse
 
 table_size = 50
 
-# (x + 1)^(n*ln(x + 1)) - 1
-# x*ln(x + 1)
-# sxe^(sign(ln(x/c))abs(ln(x/c))^n) starts off flat, grows quickly, flattens out near crossover to s, then grows quickly again.
-
 class params_t:
-    def __init__(self, curve, sensitivity, crossover, nonlinearity, magnitude, floor,
+    def __init__(self, curve, sensitivity, crossover, nonlinearity, magnitude, floor, sample_density,
         limit, limit_rate):
         self.curve = curve
         self.sensitivity = sensitivity
         self.crossover = crossover
         self.nonlinearity = nonlinearity
         self.magnitude = magnitude
+        self.sample_density = sample_density
         self.floor = floor
         self.limit = limit
         self.limit_rate = limit_rate
 
 default_params = params_t(
     curve = "gaussian_log",
-    floor = 1e-13,
+    sample_density = 12,
+    floor = 1.0e-15,
     limit = 0.0,
     limit_rate = 0.0,
     sensitivity = 10.0,
@@ -38,6 +36,7 @@ default_params = params_t(
 class curve_gaussian_log_t:
     limited = True
     apply_sensitivity = False
+    apply_velocity = False
 
     def f0(x, o, i, m):
         t = math.log(i*x)
@@ -58,7 +57,7 @@ class curve_gaussian_log_t:
         else:
             y = (x - p)*curve_gaussian_log_t.f1(p, o, i, m) + curve_gaussian_log_t.f0(p, o, i, m)
 
-        return y + f
+        return (y + f)*x
 
     def __init__(self, params):
         self.floor = params.floor
@@ -661,7 +660,6 @@ class generator_t:
     def __call__(self, x):
         unlimited = self.curve(x)
         limited = self.limiter(unlimited)
-        if not hasattr(self.curve, "apply_sensitivity") or self.curve.apply_sensitivity: limited *= self.sensitivity
         return limited
 
     def __init__(self, curve, limiter, sensitivity):
@@ -690,32 +688,30 @@ class limiter_null_t:
     def __init__(self, _):
         pass
 
-# chooses sample locations based on curvature
-class sampler_curvature_t:
-    sample_density = 5.2
-
+# chooses sample locations more densly towards 0
+#
+# The curve should have more samples where the function changes most, but curvature requires the 3rd derivative of the
+# velocity function, which isn't trivial for all of these arbitrary curves. For now, just oversample small x according
+# to t' = e^(t^s - 1)t^s, since the information there is more important. Shifting the high resolution towards 0 is still
+# very effective at making the curve feel smooth.
+class sampler_oversample_small_x_t:
     def __call__(self, t):
-        # The curve should have more samples where the sensitivity changes most. For now, just oversample small t,
-        # since the information there is more important. The change in sensitivity is the 3rd derivative of the composed
-        # function, including limiting, which isn't trivial enough to bother with yet.
+        # s = math.pow(t, self.sample_density)
+        # return math.exp(s - 1)*s
 
-        # e^(t^s - 1)/(e - 1)
-        # return (math.exp(math.pow(t, sampler_curvature_t.sample_density)) - 1)/(math.exp(1) - 1)
+        s = self.sample_density
+        return (math.exp(s*t) - 1)/(math.exp(s) - 1)
 
-        # e^(t^s - 1)t^s
-        p = math.pow(t, sampler_curvature_t.sample_density)
-        return math.exp(p - 1)*p
-
-
-    def __init__(self, num_samples):
+    def __init__(self, num_samples, sample_density):
         self.num_samples = num_samples
+        self.sample_density = sample_density
 
 # chooses sample locations uniformly
 class sampler_uniform_t:
     def __call__(self, t):
         return t*self.dt
 
-    def __init__(self, dt):
+    def __init__(self, dt, _):
         self.dt = dt
 
 # raw accel supports up to 256 samples with arbitrary locations
@@ -732,14 +728,17 @@ class output_raw_accel_t:
         x = self.sampler(t)
         y = self.generator(x)
 
+        if self.apply_velocity: y *= x
+
         x *= table_size
-        y *= x
+        y *= table_size
 
-        print(f"{x:.24f},{y:.24f};")
+        print(f"{x:.32f},{y:.32f};")
 
-    def __init__(self, generator):
+    def __init__(self, generator, sample_density, apply_velocity):
         self.generator = generator
-        self.sampler = sampler_curvature_t(table_size/output_raw_accel_t.num_samples)
+        self.sampler = sampler_oversample_small_x_t(table_size/output_raw_accel_t.num_samples, sample_density)
+        self.apply_velocity = apply_velocity
 
 # libinput supports up to 64 uniformly-spaced samples with no implicit starting point. We start it at 0 to match raw
 # accel, so it really has 63 samples. It loses all nuance at the tangent.
@@ -758,12 +757,13 @@ class output_libinput_t:
         x = self.sampler(t)
         y = self.generator(x)
 
-        y *= x/output_libinput_t.motion_step
-        y /= 2
+        if self.apply_velocity: y *= x
 
-        print(f"{y:.24f} ", end="")
+        y /= 2*output_libinput_t.motion_step
 
-    def __init__(self, generator):
+        print(f"{y:.32f} ", end="")
+
+    def __init__(self, generator, apply_velocity):
         self.generator = generator
         self.sampler = sampler_uniform_t(output_libinput_t.motion_step)
 
@@ -786,6 +786,7 @@ def create_arg_parser():
     impl.add_argument('-n', '--nonlinearity', type=float, default=default_params.nonlinearity)
     impl.add_argument('-m', '--magnitude', type=float, default=default_params.magnitude)
     impl.add_argument('-f', '--floor', type=float, default=default_params.floor)
+    impl.add_argument('-d', '--sample-density', type=float, default=default_params.sample_density)
     impl.add_argument('-l', '--limit', type=float, default=default_params.limit)
     impl.add_argument('-r', '--limit-rate', type=float, default=default_params.limit_rate)
 
@@ -851,6 +852,7 @@ def create_arg_parser():
         crossover = result.crossover/table_size,
         nonlinearity = result.nonlinearity,
         magnitude = result.magnitude,
+        sample_density = result.sample_density,
         floor = result.floor,
         limit_rate = result.limit_rate,
         limit = result.limit
@@ -859,4 +861,12 @@ def create_arg_parser():
     return result
 
 args = create_arg_parser()
-app_t().run(args.output_t(generator_t(args.curve_t(args.params), args.limiter_t(args.params), args.params.sensitivity)))
+
+curve = args.curve_t(args.params)
+apply_sensitivity = not hasattr(curve, "apply_sensitivity") or curve.apply_sensitivity
+apply_velocity = not hasattr(curve, "apply_velocity") or curve.apply_velocity
+generator_sensitivity = args.params.sensitivity if apply_sensitivity else 1.0
+generator = generator_t(curve, args.limiter_t(args.params), generator_sensitivity)
+
+output = args.output_t(generator, args.sample_density, apply_velocity)
+app_t().run(output)
