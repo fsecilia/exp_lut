@@ -32,7 +32,7 @@ default_params = params_t(
 
 # Gaussian of the log. This runs the whole negative portion of log through the gaussian. It picks up very quickly,
 # but this feels more transparent than fast.
-# https://www.desmos.com/calculator/xgbnlfbkzl
+# https://www.desmos.com/calculator/ck6xyoqmlh
 class curve_gaussian_log_t:
     limited = True
     apply_sensitivity = False
