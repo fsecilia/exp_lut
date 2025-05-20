@@ -20,31 +20,31 @@ class params_t:
 
 default_params = params_t(
     curve = "gaussian_log",
-    sample_density = 8,
+    sample_density = 10,
     floor = 0.0,
     limit = 0.0,
     limit_rate = 0.0,
     sensitivity = 10.0,
     crossover = 50*1.0,
-    nonlinearity = 1.38752,
-    magnitude = 0.925,
+    nonlinearity = 1.25,
+    magnitude = 0.84,
 )
 
 # Gaussian of the log. This runs the whole negative portion of log through the gaussian. It picks up very quickly,
 # but this feels more transparent than fast.
-# https://www.desmos.com/calculator/qgencrefrj
+# https://www.desmos.com/calculator/ebdryigpkw
 class curve_gaussian_log_t:
     limited = True
     apply_sensitivity = False
     apply_velocity = False
 
     def f0(x, o, i, m, n):
-        # oe^(-((log(ix)/n)^2/2)^m)
+        # f(x) = ae^(-((log(bx)/n)^2/2)^m)
         return o*math.exp(-math.pow(math.pow(math.log(i*x)/n, 2)/2, m))
 
     def f1(x, o, i, m, n):
-        # d/dx(o e^(-(1/2 (log(i x)/n)^2)^m)) = -(2^(1 - m) m o e^(-2^(-m) (log^2(i x)/n^2)^m) ((log^2(i x))/n^2)^m)/(x log(i x))
-        return math.pow(2, 1 - m)*m*o*math.exp(-math.pow(2, -m)*math.pow(math.log(i*x)/n, 2*m))*(math.pow(math.log(i*x), 2*m - 1)/math.pow(n, 2*m))/x
+        # d/dx(o e^(-(1/2 (log(a x)/n)^2)^m)) = -(2^(1 - m) m o e^(-2^(-m) (log^2(a x)/n^2)^m) ((log^2(a x))/n^2)^m)/(x log(a x))
+        return -(o/x)*2*m*(2*(n**2.0))**-m*math.log(i*x)**(2*m - 1)*math.exp(-(math.log(i*x)**2.0)**m*(2*n**2.0)**-m)
 
     def __call__(self, x):
         f = self.floor
