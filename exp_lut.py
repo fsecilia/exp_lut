@@ -20,42 +20,44 @@ class params_t:
 
 default_params = params_t(
     curve = "gaussian_log",
-    sample_density = 12,
-    floor = 1.0e-15,
+    sample_density = 8,
+    floor = 0.0,
     limit = 0.0,
     limit_rate = 0.0,
     sensitivity = 10.0,
     crossover = 50*1.0,
-    nonlinearity = 0.0,
-    magnitude = 1.5,
+    nonlinearity = 1.38752,
+    magnitude = 0.925,
 )
 
 # Gaussian of the log. This runs the whole negative portion of log through the gaussian. It picks up very quickly,
 # but this feels more transparent than fast.
-# https://www.desmos.com/calculator/ck6xyoqmlh
+# https://www.desmos.com/calculator/qgencrefrj
 class curve_gaussian_log_t:
     limited = True
     apply_sensitivity = False
     apply_velocity = False
 
-    def f0(x, o, i, m):
-        t = math.log(i*x)
-        return o*math.exp(-t*t/(2*m*m))
+    def f0(x, o, i, m, n):
+        # oe^(-((log(ix)/n)^2/2)^m)
+        return o*math.exp(-math.pow(math.pow(math.log(i*x)/n, 2)/2, m))
 
-    def f1(x, o, i, m):
-        return -curve_gaussian_log_t.f0(x, o, i, m)*math.log(i*x)/(m*m*x)
+    def f1(x, o, i, m, n):
+        # d/dx(o e^(-(1/2 (log(i x)/n)^2)^m)) = -(2^(1 - m) m o e^(-2^(-m) (log^2(i x)/n^2)^m) ((log^2(i x))/n^2)^m)/(x log(i x))
+        return math.pow(2, 1 - m)*m*o*math.exp(-math.pow(2, -m)*math.pow(math.log(i*x)/n, 2*m))*(math.pow(math.log(i*x), 2*m - 1)/math.pow(n, 2*m))/x
 
     def __call__(self, x):
         f = self.floor
         o = self.sensitivity
         i = self.crossover
         m = self.magnitude
+        n = self.nonlinearity
 
         p = 1/i
         if x < p:
-            y = curve_gaussian_log_t.f0(x, o, i, m)
+            y = curve_gaussian_log_t.f0(x, o, i, m, n)
         else:
-            y = (x - p)*curve_gaussian_log_t.f1(p, o, i, m) + curve_gaussian_log_t.f0(p, o, i, m)
+            y = curve_gaussian_log_t.f0(p, o, i, m, n) + (x - p)*curve_gaussian_log_t.f1(p, o, i, m, n)
 
         return (y + f)*x
 
@@ -64,6 +66,7 @@ class curve_gaussian_log_t:
         self.sensitivity = params.sensitivity
         self.crossover = params.crossover
         self.magnitude = params.magnitude
+        self.nonlinearity = params.nonlinearity
 
 # same as reverse gaussian, but of the log starting at 1
 # http://desmos.com/calculator/fn4a93seke
