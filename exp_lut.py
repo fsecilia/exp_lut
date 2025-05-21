@@ -19,15 +19,15 @@ class params_t:
         self.limit_rate = limit_rate
 
 default_params = params_t(
-    curve = "cosine_log",
-    sample_density = 8,
+    curve = "gaussian_log",
+    sample_density = 10,
     floor = 0.0,
     limit = 0.0,
     limit_rate = 0.0,
     sensitivity = 10.0,
     crossover = 50*1.0,
-    nonlinearity = 1,
-    magnitude = 0.5,
+    nonlinearity = 1.25,
+    magnitude = 0.6355,
 )
 
 # cosine of the log
