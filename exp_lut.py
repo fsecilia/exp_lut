@@ -19,44 +19,17 @@ class params_t:
         self.limit_rate = limit_rate
 
 default_params = params_t(
-    curve = "cosine",
+    curve = "gaussian_log",
     sample_density = 10,
     floor = 0.0,
     limit = 0.0,
     limit_rate = 0.0,
     sensitivity = 10.0,
     crossover = 50*1.0,
-    nonlinearity = 0.45,
-    magnitude = 1.1,
+    nonlinearity = 1.25,
+    magnitude = 0.84,
+
 )
-
-# cosine
-class curve_cosine_t:
-    limited = True
-    apply_sensitivity = False
-    apply_velocity = False
-
-    def __call__(self, x):
-        f = self.floor
-        o = self.sensitivity
-        i = self.crossover
-        m = self.magnitude
-        n = self.nonlinearity
-
-        p = 1/i
-        if x < p:
-            y = o*math.pow((1 - math.cos(math.pi*(i*x)**n))/2, m)
-        else:
-            y = o
-
-        return (y + f)*x
-
-    def __init__(self, params):
-        self.floor = params.floor
-        self.sensitivity = params.sensitivity
-        self.crossover = params.crossover
-        self.magnitude = params.magnitude
-        self.nonlinearity = params.nonlinearity
 
 # Gaussian of the log. This runs the whole negative portion of log through the gaussian. It picks up very quickly,
 # but this feels more transparent than fast.
@@ -86,6 +59,34 @@ class curve_gaussian_log_t:
             y = curve_gaussian_log_t.f0(x, o, i, m, n)
         else:
             y = curve_gaussian_log_t.f0(p, o, i, m, n) + (x - p)*curve_gaussian_log_t.f1(p, o, i, m, n)
+
+        return (y + f)*x
+
+    def __init__(self, params):
+        self.floor = params.floor
+        self.sensitivity = params.sensitivity
+        self.crossover = params.crossover
+        self.magnitude = params.magnitude
+        self.nonlinearity = params.nonlinearity
+
+# simple cosine
+class curve_cosine_t:
+    limited = True
+    apply_sensitivity = False
+    apply_velocity = False
+
+    def __call__(self, x):
+        f = self.floor
+        o = self.sensitivity
+        i = self.crossover
+        m = self.magnitude
+        n = self.nonlinearity
+
+        p = 1/i
+        if x < p:
+            y = o*math.pow((1 - math.cos(math.pi*(i*x)**n))/2, m)
+        else:
+            y = o
 
         return (y + f)*x
 
