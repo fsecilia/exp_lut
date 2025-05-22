@@ -27,7 +27,7 @@ default_params = params_t(
     sensitivity = 10.0,
     crossover = 50*1.0,
     nonlinearity = 1.25,
-    magnitude = 0.84,
+    magnitude = 0.73775,
 )
 
 # cosine of the log
