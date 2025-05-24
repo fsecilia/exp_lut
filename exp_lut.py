@@ -20,14 +20,14 @@ class params_t:
 
 default_params = params_t(
     curve = "gaussian_log",
-    sample_density = 10,
+    sample_density = 16,
     floor = 0.0,
     limit = 0.0,
     limit_rate = 0.0,
-    sensitivity = 10.0,
     crossover = 50*1.0,
-    nonlinearity = 1.25,
-    magnitude = 0.73775,
+    sensitivity = 10.0,
+    nonlinearity = 5/4,
+    magnitude = 2/3,
 )
 
 # cosine of the log
@@ -83,7 +83,7 @@ class curve_cosine_t:
 
 # Gaussian of the log. This runs the whole negative portion of log through the gaussian. It picks up very quickly,
 # but this feels more transparent than fast.
-# https://www.desmos.com/calculator/qiz7tpw3iw
+# https://www.desmos.com/calculator/tanoq7f0jb
 class curve_gaussian_log_t:
     limited = True
     apply_sensitivity = False
@@ -746,13 +746,10 @@ class limiter_null_t:
 #
 # The curve should have more samples where the function changes most, but curvature requires the 3rd derivative of the
 # velocity function, which isn't trivial for all of these arbitrary curves. For now, just oversample small x according
-# to t' = e^(t^s - 1)t^s, since the information there is more important. Shifting the high resolution towards 0 is still
+# to t' = e^(st - 1)/e^(s - 1), since the information there is more important. Shifting the high resolution towards 0 is still
 # very effective at making the curve feel smooth.
 class sampler_oversample_small_x_t:
     def __call__(self, t):
-        # s = math.pow(t, self.sample_density)
-        # return math.exp(s - 1)*s
-
         s = self.sample_density
         return (math.exp(s*t) - 1)/(math.exp(s) - 1)
 
