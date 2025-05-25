@@ -20,14 +20,14 @@ class params_t:
 
 default_params = params_t(
     curve = "gaussian_log",
-    sample_density = 16,
+    sample_density = 11,
     floor = 0.0,
     limit = 0.0,
     limit_rate = 0.0,
     crossover = 50*1.0,
-    sensitivity = 10.0,
-    nonlinearity = 5/4,
-    magnitude = 2/3,
+    sensitivity = 10.0*0.75,
+    nonlinearity = 1.5,
+    magnitude = 0.95,
 )
 
 # cosine of the log
@@ -83,7 +83,7 @@ class curve_cosine_t:
 
 # Gaussian of the log. This runs the whole negative portion of log through the gaussian. It picks up very quickly,
 # but this feels more transparent than fast.
-# https://www.desmos.com/calculator/tanoq7f0jb
+# https://www.desmos.com/calculator/2vfdbcmwxr
 class curve_gaussian_log_t:
     limited = True
     apply_sensitivity = False
