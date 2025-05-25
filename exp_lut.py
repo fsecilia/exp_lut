@@ -20,7 +20,7 @@ class params_t:
 
 default_params = params_t(
     curve = "gaussian_log",
-    sample_density = 11,
+    sample_density = 9,
     floor = 0.0,
     limit = 0.0,
     limit_rate = 0.0,
