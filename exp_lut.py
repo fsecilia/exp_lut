@@ -20,14 +20,14 @@ class params_t:
 
 default_params = params_t(
     curve = "gaussian_log",
-    sample_density = 7,
+    sample_density = 10,
     floor = 0.0,
     limit = 0.0,
     limit_rate = 0.0,
     crossover = 50*1.0,
-    sensitivity = 10.0*1.5,
-    nonlinearity = 0.875,
-    magnitude = 0.54,
+    sensitivity = 10.0*1.4,
+    nonlinearity = 1.0,
+    magnitude = 0.7,
 )
 
 class curve_logp1_t:
