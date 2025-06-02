@@ -19,19 +19,42 @@ class params_t:
         self.limit_rate = limit_rate
 
 default_params = params_t(
-    curve = "gaussian_log",
-    sample_density = 9,
+    curve = "logp1",
+    sample_density = 8,
     floor = 0.0,
     limit = 0.0,
     limit_rate = 0.0,
     crossover = 50*1.0,
-    sensitivity = 10.0*1.0,
-    nonlinearity = 1.333,
-    magnitude = 0.8,
+    sensitivity = 10.0*1.5,
+    nonlinearity = 1.0,
+    magnitude = 1.0,
 )
 
-# d/dx ((o e^(-(log(i x)/c)^(2 t)))/(2 t)) = -(o e^(-(log(i x)/c)^(2 t)) (log(i x)/c)^(2 t))/(x log(i x))
+class curve_logp1_t:
+    limited = True
+    apply_sensitivity = False
+    apply_velocity = False
 
+    def __call__(self, x):
+        f = self.floor
+        o = self.sensitivity
+        i = self.crossover
+        m = self.magnitude
+        n = self.nonlinearity
+
+        y = o*math.pow((math.log(i*x + 1)/math.log(2)), m)*math.pow(x, n)
+        return y + f
+
+    def __init__(self, params):
+        self.floor = params.floor
+        self.sensitivity = params.sensitivity
+        self.crossover = params.crossover
+        self.magnitude = params.magnitude
+        self.nonlinearity = params.nonlinearity
+        self.x0 = params.limit
+
+
+# d/dx ((o e^(-(log(i x)/c)^(2 t)))/(2 t)) = -(o e^(-(log(i x)/c)^(2 t)) (log(i x)/c)^(2 t))/(x log(i x))
 # Gaussian of the log. This runs the whole negative portion of log through the gaussian. It picks up very quickly,
 # but this feels more transparent than fast.
 # https://www.desmos.com/calculator/2vfdbcmwxr
@@ -895,6 +918,7 @@ def create_arg_parser():
         "gaussian_log": curve_gaussian_log_t,
         "cosine": curve_cosine_t,
         "cosine_log": curve_cosine_log_t,
+        "logp1": curve_logp1_t,
     }
     impl.add_argument('-x', '--curve', choices=curve_choices.keys(), default=default_params.curve)
 
