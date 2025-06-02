@@ -20,15 +20,58 @@ class params_t:
 
 default_params = params_t(
     curve = "gaussian_log",
-    sample_density = 12,
+    sample_density = 9,
     floor = 0.0,
     limit = 0.0,
     limit_rate = 0.0,
     crossover = 50*1.0,
-    sensitivity = 10.0*0.75,
-    nonlinearity = 1.5,
-    magnitude = 0.95,
+    sensitivity = 10.0*1.0,
+    nonlinearity = 1.333,
+    magnitude = 0.8,
 )
+
+# d/dx ((o e^(-(log(i x)/c)^(2 t)))/(2 t)) = -(o e^(-(log(i x)/c)^(2 t)) (log(i x)/c)^(2 t))/(x log(i x))
+
+# Gaussian of the log. This runs the whole negative portion of log through the gaussian. It picks up very quickly,
+# but this feels more transparent than fast.
+# https://www.desmos.com/calculator/2vfdbcmwxr
+class curve_gaussian_log_t:
+    limited = True
+    apply_sensitivity = False
+    apply_velocity = False
+
+    def f0(x, o, i, m, n):
+        # f(x) = ae^(-((log(bx)/n)^2/2)^m)
+        return o*math.exp(-math.pow(math.pow(math.log(i*x)/n, 2)/2, m))
+
+    def f1(x, o, i, m, n):
+        # d/dx(o e^(-(1/2 (log(a x)/n)^2)^m)) = -(2^(1 - m) m o e^(-2^(-m) (log^2(a x)/n^2)^m) ((log^2(a x))/n^2)^m)/(x log(a x))
+        return -(o/x)*2*m*(2*(n**2.0))**-m*math.log(i*x)**(2*m - 1)*math.exp(-(math.log(i*x)**2.0)**m*(2*n**2.0)**-m)
+
+    def __call__(self, x):
+        x -= self.x0
+
+        f = self.floor
+        o = self.sensitivity
+        i = self.crossover
+        m = self.magnitude
+        n = self.nonlinearity
+
+        p = 1/i
+        if x < p:
+            y = curve_gaussian_log_t.f0(x, o, i, m, n)
+        else:
+            y = curve_gaussian_log_t.f0(p, o, i, m, n) + (x - p)*curve_gaussian_log_t.f1(p, o, i, m, n)
+
+        return y*(x + self.x0) + f
+
+    def __init__(self, params):
+        self.floor = params.floor
+        self.sensitivity = params.sensitivity
+        self.crossover = params.crossover
+        self.magnitude = params.magnitude
+        self.nonlinearity = params.nonlinearity
+        self.x0 = params.limit
 
 # cosine of the log
 class curve_cosine_log_t:
@@ -81,44 +124,6 @@ class curve_cosine_t:
         self.magnitude = params.magnitude
         self.nonlinearity = params.nonlinearity
 
-# Gaussian of the log. This runs the whole negative portion of log through the gaussian. It picks up very quickly,
-# but this feels more transparent than fast.
-# https://www.desmos.com/calculator/2vfdbcmwxr
-class curve_gaussian_log_t:
-    limited = True
-    apply_sensitivity = False
-    apply_velocity = False
-
-    def f0(x, o, i, m, n):
-        # f(x) = ae^(-((log(bx)/n)^2/2)^m)
-        return o*math.exp(-math.pow(math.pow(math.log(i*x)/n, 2)/2, m))
-
-    def f1(x, o, i, m, n):
-        # d/dx(o e^(-(1/2 (log(a x)/n)^2)^m)) = -(2^(1 - m) m o e^(-2^(-m) (log^2(a x)/n^2)^m) ((log^2(a x))/n^2)^m)/(x log(a x))
-        return -(o/x)*2*m*(2*(n**2.0))**-m*math.log(i*x)**(2*m - 1)*math.exp(-(math.log(i*x)**2.0)**m*(2*n**2.0)**-m)
-
-    def __call__(self, x):
-        f = self.floor
-        o = self.sensitivity
-        i = self.crossover
-        m = self.magnitude
-        n = self.nonlinearity
-
-        p = 1/i
-        if x < p:
-            y = curve_gaussian_log_t.f0(x, o, i, m, n)
-        else:
-            y = curve_gaussian_log_t.f0(p, o, i, m, n) + (x - p)*curve_gaussian_log_t.f1(p, o, i, m, n)
-
-        return (y + f)*x
-
-    def __init__(self, params):
-        self.floor = params.floor
-        self.sensitivity = params.sensitivity
-        self.crossover = params.crossover
-        self.magnitude = params.magnitude
-        self.nonlinearity = params.nonlinearity
-
 # same as reverse gaussian, but of the log starting at 1
 # http://desmos.com/calculator/fn4a93seke
 class curve_reverse_gaussian_log_t:
@@ -130,14 +135,24 @@ class curve_reverse_gaussian_log_t:
         o = self.sensitivity
         i = self.crossover
         n = self.nonlinearity
-        m = self.magnitude
+        t = self.magnitude
 
         a = o
-        b = n/m
-        c = i
-        d = m
+        c = n
 
-        return a*(1 - math.exp(-b*math.pow(math.log(c*x + 1), 2*d))) + f
+        return a*(
+            1 -
+            math.pow(
+                math.exp(
+                    -math.pow(
+                        math.log(i*x + 1)/c,
+                        2*t
+                    )
+                    /(2*t)
+                ),
+                2*t
+            )
+        ) + f
 
     def __init__(self, params):
         self.floor = params.floor
