@@ -19,16 +19,53 @@ class params_t:
         self.limit_rate = limit_rate
 
 default_params = params_t(
-    curve = "gaussian_log",
+    curve = "tapered_logp1",
     sample_density = 10,
     floor = 0.0,
-    limit = 0.0,
-    limit_rate = 0.0,
-    crossover = 50*1.0,
-    sensitivity = 10.0*1.4,
-    nonlinearity = 1.0,
-    magnitude = 0.7,
+    limit = 0.01,
+    limit_rate = 200.0,
+    crossover = 50*2.0,
+    sensitivity = 10.0*0.465*500/368,
+    nonlinearity = -0.2,
+    magnitude = 0.01,
 )
+
+# logp1(softplus + offset), gives logp1 a horizontal attack
+class curve_tapered_logp1_t:
+    limited = True
+    apply_sensitivity = False
+    apply_velocity = False
+
+    def f(x, xf0):
+        return math.log(x - xf0 + 1)/math.log(2)
+
+    def l(x, r, i, xl0):
+        return math.log(1 + math.exp(r*i*(x - xl0)))/r
+
+    def fl(x, r, i, xf0, xl0):
+        return curve_tapered_logp1_t.f(curve_tapered_logp1_t.l(x, r, i, xl0), xl0)
+
+    def __call__(self, x):
+        f = self.floor
+        o = self.sensitivity
+        i = self.crossover
+        n = self.nonlinearity
+        r = self.limit_rate
+        xl0 = self.limit
+        xf0 = self.magnitude
+
+        y = o*math.pow(x, n + 1)*(curve_tapered_logp1_t.fl(x, r, i, xf0, xl0) - curve_tapered_logp1_t.fl(0, r, i, xf0, xl0));
+
+        return y + f
+
+    def __init__(self, params):
+        self.floor = params.floor
+        self.sensitivity = params.sensitivity
+        self.crossover = params.crossover
+        self.nonlinearity = params.nonlinearity
+        self.limit = params.limit
+        self.limit_rate = params.limit_rate
+        self.magnitude = params.magnitude
 
 class curve_logp1_t:
     limited = True
@@ -919,6 +956,7 @@ def create_arg_parser():
         "cosine": curve_cosine_t,
         "cosine_log": curve_cosine_log_t,
         "logp1": curve_logp1_t,
+        "tapered_logp1": curve_tapered_logp1_t,
     }
     impl.add_argument('-x', '--curve', choices=curve_choices.keys(), default=default_params.curve)
 
