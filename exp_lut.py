@@ -21,12 +21,12 @@ class params_t:
 default_params = params_t(
     curve = "tapered_logp1",
     sample_density = 10,
-    crossover = 50*5.0,
-    sensitivity = 10.0*0.285,
+    crossover = 50*1.0,
+    sensitivity = 10.0*1.0,
     nonlinearity = 0,
-    magnitude = 0.17,
-    limit = 0.01,
-    limit_rate = 250.0,
+    magnitude = 0.0,
+    limit = 0.0075,
+    limit_rate = 540.0,
     floor = 0.0,
 )
 
@@ -36,15 +36,28 @@ class curve_tapered_logp1_t:
     apply_sensitivity = False
     apply_velocity = False
 
-    def f(x, i, m):
-        return math.log(i*x*(math.exp(1) - 1) + 1 - m)/math.log(2)
+    def a(x):
+        return math.log(x)/x
 
-    def g(x, l, r):
+    def b(x, i, m):
+        return (math.exp(1) - 1)*i*x + 1 - m
+
+    def c(x, l, r):
         return math.log(1 + math.exp(r*(x - l)))/r
 
+    def f(x, i, m, l, r):
+        a = curve_tapered_logp1_t.a
+        b = curve_tapered_logp1_t.b
+        c = curve_tapered_logp1_t.c
+        return a(b(c(x, l, r), i, m))
+
+    def g(x, i, m, l, r):
+        f = curve_tapered_logp1_t.f
+        return f(x, i, m, l, r) - f(0, i, m, l, r)
+
     def h(x, i, m, l, r):
-        g = curve_tapered_logp1_t.g(x, l, r) - curve_tapered_logp1_t.g(0, l, r)
-        return curve_tapered_logp1_t.f(g, i, m) - curve_tapered_logp1_t.f(0, i, m)
+        g = curve_tapered_logp1_t.g
+        return g(x, i, m, l, r)/g(1, i, m, l, r)
 
     def __call__(self, x):
         f = self.floor
@@ -671,11 +684,28 @@ class curve_constant_t:
         pass
 
 class curve_linear_t:
-    def __call__(self, x):
-        return x
+    limited = True
+    apply_sensitivity = False
+    apply_velocity = False
 
-    def __init__(self, _):
-        pass
+    def __call__(self, x):
+        s = self.sensitivity
+        return x*x*s
+
+    def __init__(self, params):
+        self.sensitivity = params.sensitivity
+
+class curve_logp1_t:
+    limited = True
+    apply_sensitivity = False
+    apply_velocity = False
+
+    def __call__(self, x):
+        s = self.sensitivity
+        return x*s*math.log(x + 1)/math.log(2)
+
+    def __init__(self, params):
+        self.sensitivity = params.sensitivity
 
 class curve_power_t:
     def __call__(self, x):
@@ -920,6 +950,7 @@ def create_arg_parser():
     curve_choices={
         "constant": curve_constant_t,
         "linear": curve_linear_t,
+        "logp1": curve_logp1_t,
         "power": curve_power_t,
         "exponential": curve_exponential_t,
         "exponential_by_power": curve_exponential_by_power_t,
