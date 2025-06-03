@@ -21,13 +21,13 @@ class params_t:
 default_params = params_t(
     curve = "tapered_logp1",
     sample_density = 10,
-    floor = 0.0,
+    crossover = 50*5.0,
+    sensitivity = 10.0*0.285,
+    nonlinearity = 0,
+    magnitude = 0.17,
     limit = 0.01,
-    limit_rate = 200.0,
-    crossover = 50*2.0,
-    sensitivity = 10.0*0.465*500/368,
-    nonlinearity = -0.2,
-    magnitude = 0.01,
+    limit_rate = 250.0,
+    floor = 0.0,
 )
 
 # logp1(softplus + offset), gives logp1 a horizontal attack
@@ -36,14 +36,15 @@ class curve_tapered_logp1_t:
     apply_sensitivity = False
     apply_velocity = False
 
-    def f(x, xf0):
-        return math.log(x - xf0 + 1)/math.log(2)
+    def f(x, i, m):
+        return math.log(i*x*(math.exp(1) - 1) + 1 - m)/math.log(2)
 
-    def l(x, r, i, xl0):
-        return math.log(1 + math.exp(r*i*(x - xl0)))/r
+    def g(x, l, r):
+        return math.log(1 + math.exp(r*(x - l)))/r
 
-    def fl(x, r, i, xf0, xl0):
-        return curve_tapered_logp1_t.f(curve_tapered_logp1_t.l(x, r, i, xl0), xl0)
+    def h(x, i, m, l, r):
+        g = curve_tapered_logp1_t.g(x, l, r) - curve_tapered_logp1_t.g(0, l, r)
+        return curve_tapered_logp1_t.f(g, i, m) - curve_tapered_logp1_t.f(0, i, m)
 
     def __call__(self, x):
         f = self.floor
@@ -51,10 +52,10 @@ class curve_tapered_logp1_t:
         i = self.crossover
         n = self.nonlinearity
         r = self.limit_rate
-        xl0 = self.limit
-        xf0 = self.magnitude
+        l = self.limit
+        m = self.magnitude
 
-        y = o*math.pow(x, n + 1)*(curve_tapered_logp1_t.fl(x, r, i, xf0, xl0) - curve_tapered_logp1_t.fl(0, r, i, xf0, xl0));
+        y = o*math.pow(x, n + 1)*curve_tapered_logp1_t.h(x, i, m, l, r);
 
         return y + f
 
