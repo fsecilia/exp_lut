@@ -23,10 +23,10 @@ default_params = params_t(
     sample_density = 10,
     crossover = 50*1.0,
     sensitivity = 10.0*1.0,
-    nonlinearity = 0,
-    magnitude = 0.0,
-    limit = 0.0075,
-    limit_rate = 540.0,
+    nonlinearity = 0.0,
+    magnitude = 1.0,
+    limit = 0.0,
+    limit_rate = 100.0,
     floor = 0.0,
 )
 
@@ -36,11 +36,11 @@ class curve_tapered_logp1_t:
     apply_sensitivity = False
     apply_velocity = False
 
-    def a(x):
-        return math.log(x)/x
+    def a(x, m):
+        return (math.log(x)/x)**m
 
-    def b(x, i, m):
-        return (math.exp(1) - 1)*i*x + 1 - m
+    def b(x, i):
+        return (math.exp(1) - 1)*i*x + 1
 
     def c(x, l, r):
         return math.log(1 + math.exp(r*(x - l)))/r
@@ -49,7 +49,7 @@ class curve_tapered_logp1_t:
         a = curve_tapered_logp1_t.a
         b = curve_tapered_logp1_t.b
         c = curve_tapered_logp1_t.c
-        return a(b(c(x, l, r), i, m))
+        return a(b(c(x, l, r), i), m)
 
     def g(x, i, m, l, r):
         f = curve_tapered_logp1_t.f
