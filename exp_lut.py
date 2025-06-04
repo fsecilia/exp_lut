@@ -19,9 +19,9 @@ class params_t:
         self.limit_rate = limit_rate
 
 default_params = params_t(
-    curve = "tapered_logp1",
-    sample_density = 10,
-    crossover = 50*1.0,
+    curve = "smoothstep_logp1",
+    sample_density = 8,
+    crossover = 50*2.0,
     sensitivity = 10.0*1.0,
     nonlinearity = 0.0,
     magnitude = 1.0,
@@ -802,18 +802,51 @@ class curve_smooth_t:
 
 # symmetric cubic hermite: 3x^2 - 2x^3
 class curve_smoothstep_t:
-    def __call__(self, x):
-        if x >= 2*self.crossover: return 2*self.crossover
+    limited = True
+    apply_sensitivity = False
+    apply_velocity = False
 
-        d = 1.0/(2*self.crossover)
-        u = d*x
-        v = d*self.crossover
-        uu = u*u
-        vv = v*v
-        return self.crossover*(3*uu - 2*uu*u)/(3*vv - 2*vv*v)
+    def __call__(self, x):
+        i = self.crossover
+        m = self.magnitude
+        o = self.sensitivity
+
+        t = x
+        t = min(t, 1/i)
+        t = i*t
+
+        tt = t*t
+        return o*(3*tt - 2*tt*t)**m*x
 
     def __init__(self, params):
         self.crossover = params.crossover
+        self.magnitude = params.magnitude
+        self.sensitivity = params.sensitivity
+
+# smoothstep, but of logp1
+class curve_smoothstep_logp1_t:
+    limited = True
+    apply_sensitivity = False
+    apply_velocity = False
+
+    def __call__(self, x):
+        i = self.crossover
+        m = self.magnitude
+        o = self.sensitivity
+
+        t = x
+        t = min(t, 1/i)
+        t = (math.e - 1)*t
+        t = i*t
+        t = math.log(t + 1)
+
+        tt = t*t
+        return o*(3*tt - 2*tt*t)**m*x
+
+    def __init__(self, params):
+        self.crossover = params.crossover
+        self.magnitude = params.magnitude
+        self.sensitivity = params.sensitivity
 
 # combines a curve with a limiter and sensitivity
 class generator_t:
@@ -964,6 +997,7 @@ def create_arg_parser():
         "normalized_logistic_log": curve_normalized_logistic_log_t,
         "smooth": curve_smooth_t,
         "smoothstep": curve_smoothstep_t,
+        "smoothstep_logp1": curve_smoothstep_logp1_t,
         "exponential_by_logistic_log": curve_exponential_by_logistic_log_t,
         "horizontal_into_exponential": curve_horizontal_into_exponential_t,
         "exponential_by_unit_logistic_log": curve_exponential_by_unit_logistic_log_t,
