@@ -19,12 +19,12 @@ class params_t:
         self.limit_rate = limit_rate
 
 default_params = params_t(
-    curve = "smoothstep_logp1",
+    curve = "gaussian_log",
     sample_density = 8,
     crossover = 50*2.0,
     sensitivity = 10.0*1.0,
-    nonlinearity = 0.0,
-    magnitude = 1.0,
+    nonlinearity = 1.25,
+    magnitude = 0.9,
     limit = 0.0,
     limit_rate = 100.0,
     floor = 0.0,
