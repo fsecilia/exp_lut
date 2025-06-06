@@ -115,8 +115,8 @@ class curve_tapered_logp1_t:
     def a(x, m):
         return (math.log(x)/x)**m
 
-    def b(x, i):
-        return (math.exp(1) - 1)*i*x + 1
+    def b(x):
+        return (math.exp(1) - 1)*x + 1
 
     def c(x, l, r):
         return math.log(1 + math.exp(r*(x - l)))/r
@@ -125,7 +125,7 @@ class curve_tapered_logp1_t:
         a = curve_tapered_logp1_t.a
         b = curve_tapered_logp1_t.b
         c = curve_tapered_logp1_t.c
-        return a(b(c(x, l, r), i), m)
+        return a(b(c(i*x, l, r)), m)
 
     def g(x, i, m, l, r):
         f = curve_tapered_logp1_t.f
