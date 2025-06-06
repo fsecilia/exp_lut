@@ -19,14 +19,14 @@ class params_t:
         self.limit_rate = limit_rate
 
 default_params = params_t(
-    curve = "cosine_log",
+    curve = "tapered_logp1",
     sample_density = 10,
-    crossover = 50*2.0,
+    crossover = 50*1.0,
     sensitivity = 10.0*1.0,
-    nonlinearity = 0.75,
-    magnitude = 0.0,
-    limit = 0.0,
-    limit_rate = 100.0,
+    nonlinearity = 0.0,
+    magnitude = 1.0,
+    limit = 0.01,
+    limit_rate = 250.0,
     floor = 0.0,
 )
 
@@ -125,30 +125,33 @@ class curve_tapered_logp1_t:
     def c(x, l, r):
         return math.log(1 + math.exp(r*(x - l)))/r
 
-    def f(x, i, m, l, r):
+    def f(x, m, l, r):
         a = curve_tapered_logp1_t.a
         b = curve_tapered_logp1_t.b
         c = curve_tapered_logp1_t.c
-        return a(b(c(i*x, l, r)), m)
+        return a(b(c(x, l, r)), m)
 
-    def g(x, i, m, l, r):
+    def g(x, m, l, r):
         f = curve_tapered_logp1_t.f
-        return f(x, i, m, l, r) - f(0, i, m, l, r)
+        return f(x, m, l, r) - f(0, m, l, r)
 
-    def h(x, i, m, l, r):
+    def h(x, m, l, r):
         g = curve_tapered_logp1_t.g
-        return g(x, i, m, l, r)/g(1, i, m, l, r)
+        return g(x, m, l, r)/g(1, m, l, r)
 
     def __call__(self, x):
         f = self.floor
         o = self.sensitivity
         i = self.crossover
-        n = self.nonlinearity
-        r = self.limit_rate
-        l = self.limit
         m = self.magnitude
+        l = self.limit
+        r = self.limit_rate
 
-        y = o*math.pow(x, n + 1)*curve_tapered_logp1_t.h(x, i, m, l, r);
+        o *= x
+        p = 1/i
+        if x > p: x = p
+
+        y = o*curve_tapered_logp1_t.h(i*x, m, l, r);
 
         return y + f
 
@@ -156,10 +159,9 @@ class curve_tapered_logp1_t:
         self.floor = params.floor
         self.sensitivity = params.sensitivity
         self.crossover = params.crossover
-        self.nonlinearity = params.nonlinearity
+        self.magnitude = params.magnitude
         self.limit = params.limit
         self.limit_rate = params.limit_rate
-        self.magnitude = params.magnitude
 
 class curve_logp1_t:
     limited = True
