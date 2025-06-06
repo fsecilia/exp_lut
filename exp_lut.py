@@ -19,16 +19,92 @@ class params_t:
         self.limit_rate = limit_rate
 
 default_params = params_t(
-    curve = "gaussian_log",
-    sample_density = 10.0,
-    crossover = 50*1.0,
+    curve = "cosine_log",
+    sample_density = 10,
+    crossover = 50*2.0,
     sensitivity = 10.0*1.0,
-    nonlinearity = 1.44,
-    magnitude = 1.0,
+    nonlinearity = 0.75,
+    magnitude = 0.0,
     limit = 0.0,
     limit_rate = 100.0,
     floor = 0.0,
 )
+
+# first quarter of sin of the log
+class curve_quarter_sin_log_t:
+    limited = True
+    apply_sensitivity = False
+    apply_velocity = False
+
+    def __call__(self, x):
+        f = self.floor
+        o = self.sensitivity
+        i = self.crossover
+        n = self.nonlinearity
+
+        o *= x
+        p = 1/i
+        if x > p: x = p
+
+        y = o*math.sin(math.pi*math.log((math.sqrt(math.e) - 1)*(i*x)**n + 1))
+
+        return y + f
+
+    def __init__(self, params):
+        self.floor = params.floor
+        self.sensitivity = params.sensitivity
+        self.crossover = params.crossover
+        self.nonlinearity = params.nonlinearity
+
+# cosine of the log
+class curve_cosine_log_t:
+    limited = True
+    apply_sensitivity = False
+    apply_velocity = False
+
+    def __call__(self, x):
+        f = self.floor
+        o = self.sensitivity
+        i = self.crossover
+        n = self.nonlinearity
+
+        o *= x
+        p = 1/i
+        if x > p: x = p
+
+        y = o*(1 - math.cos(math.pi*math.log((math.exp(1) - 1)*(i*x)**n + 1)))/2
+
+        return y + f
+
+    def __init__(self, params):
+        self.floor = params.floor
+        self.sensitivity = params.sensitivity
+        self.crossover = params.crossover
+        self.nonlinearity = params.nonlinearity
+
+# simple cosine
+class curve_cosine_t:
+    limited = True
+    apply_sensitivity = False
+    apply_velocity = False
+
+    def __call__(self, x):
+        f = self.floor
+        o = self.sensitivity
+        i = self.crossover
+        m = self.magnitude
+        n = self.nonlinearity
+
+        p = 1/i
+        y = o*math.pow((1 - math.cos(math.pi*(i*min(x, p))**n))/2, m)
+        return y*i*x + f
+
+    def __init__(self, params):
+        self.floor = params.floor
+        self.sensitivity = params.sensitivity
+        self.crossover = params.crossover
+        self.magnitude = params.magnitude
+        self.nonlinearity = params.nonlinearity
 
 # logp1(softplus + offset), gives logp1 a horizontal attack
 class curve_tapered_logp1_t:
@@ -146,57 +222,6 @@ class curve_gaussian_log_t:
         self.magnitude = params.magnitude
         self.nonlinearity = params.nonlinearity
         self.x0 = params.limit
-
-# cosine of the log
-class curve_cosine_log_t:
-    limited = True
-    apply_sensitivity = False
-    apply_velocity = False
-
-    def __call__(self, x):
-        f = self.floor
-        o = self.sensitivity
-        i = self.crossover
-        m = self.magnitude
-        n = self.nonlinearity
-
-        p = 1/i
-        l = math.log((math.e - 1)*i*x + 1)
-        c = l if l < p else p
-
-        y = o*i*x*((1 - math.cos(math.pi*c**n))/2)**m
-        return y + f
-
-    def __init__(self, params):
-        self.floor = params.floor
-        self.sensitivity = params.sensitivity
-        self.crossover = params.crossover
-        self.magnitude = params.magnitude
-        self.nonlinearity = params.nonlinearity
-
-# simple cosine
-class curve_cosine_t:
-    limited = True
-    apply_sensitivity = False
-    apply_velocity = False
-
-    def __call__(self, x):
-        f = self.floor
-        o = self.sensitivity
-        i = self.crossover
-        m = self.magnitude
-        n = self.nonlinearity
-
-        p = 1/i
-        y = o*math.pow((1 - math.cos(math.pi*(i*min(x, p))**n))/2, m)
-        return y*i*x + f
-
-    def __init__(self, params):
-        self.floor = params.floor
-        self.sensitivity = params.sensitivity
-        self.crossover = params.crossover
-        self.magnitude = params.magnitude
-        self.nonlinearity = params.nonlinearity
 
 # same as reverse gaussian, but of the log starting at 1
 # http://desmos.com/calculator/fn4a93seke
@@ -1023,6 +1048,7 @@ def create_arg_parser():
         "cosine_log": curve_cosine_log_t,
         "logp1": curve_logp1_t,
         "tapered_logp1": curve_tapered_logp1_t,
+        "quarter_sin_log": curve_quarter_sin_log_t,
     }
     impl.add_argument('-x', '--curve', choices=curve_choices.keys(), default=default_params.curve)
 
