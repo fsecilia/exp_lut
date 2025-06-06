@@ -915,7 +915,7 @@ class limiter_null_t:
 class sampler_oversample_small_x_t:
     def __call__(self, t):
         s = self.sample_density
-        return (math.exp(s*t) - 1)/(math.exp(s) - 1)
+        return (math.exp(s*t) - 1)/(2*(math.exp(s) - 1))
 
     def __init__(self, num_samples, sample_density):
         self.num_samples = num_samples
