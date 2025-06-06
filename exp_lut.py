@@ -95,9 +95,13 @@ class curve_cosine_t:
         m = self.magnitude
         n = self.nonlinearity
 
+        o *= x
         p = 1/i
-        y = o*math.pow((1 - math.cos(math.pi*(i*min(x, p))**n))/2, m)
-        return y*i*x + f
+        if x > p: x = p
+
+        y = o*math.pow((1 - math.cos(math.pi*(i*x)**n))/2, m)
+
+        return y + f
 
     def __init__(self, params):
         self.floor = params.floor
