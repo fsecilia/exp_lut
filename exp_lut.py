@@ -23,8 +23,8 @@ default_params = params_t(
     sample_density = 10,
     crossover = 50*2.0,
     sensitivity = 10.0*1.2,
-    nonlinearity = 0.67,
-    magnitude = 1.0,
+    nonlinearity = 1.0,
+    magnitude = 0.67,
     limit = 0.0,
     limit_rate = 0.0,
     floor = 0.0,
@@ -40,14 +40,13 @@ class curve_first_quarter_sine_t:
         f = self.floor
         o = self.sensitivity
         i = self.crossover
-        n = self.nonlinearity
         m = self.magnitude
 
         o *= x
         p = 1/i
         if x > p: x = p
 
-        y = o*math.sin((math.pi/2)*(i*x)**n)**m
+        y = o*math.sin(x*i*math.pi/2)**m
 
         return y + f
 
@@ -55,7 +54,6 @@ class curve_first_quarter_sine_t:
         self.floor = params.floor
         self.sensitivity = params.sensitivity
         self.crossover = params.crossover
-        self.nonlinearity = params.nonlinearity
         self.magnitude = params.magnitude
 
 # first quarter of sin of the log plus 1
@@ -68,14 +66,13 @@ class curve_first_quarter_sine_logp1_t:
         f = self.floor
         o = self.sensitivity
         i = self.crossover
-        n = self.nonlinearity
         m = self.magnitude
 
         o *= x
         p = 1/i
         if x > p: x = p
 
-        y = o*math.sin((math.pi/2)*math.log((math.e - 1)*(i*x)**n + 1))**m
+        y = o*math.sin(math.log(x*i*(math.e - 1) + 1)*math.pi/2)**m
 
         return y + f
 
@@ -83,7 +80,6 @@ class curve_first_quarter_sine_logp1_t:
         self.floor = params.floor
         self.sensitivity = params.sensitivity
         self.crossover = params.crossover
-        self.nonlinearity = params.nonlinearity
         self.magnitude = params.magnitude
 
 # second half of cosine
@@ -96,14 +92,13 @@ class curve_second_half_cosine_t:
         f = self.floor
         o = self.sensitivity
         i = self.crossover
-        n = self.nonlinearity
         m = self.magnitude
 
         o *= x
         p = 1/i
         if x > p: x = p
 
-        y = o*((math.cos(math.pi*((i*x)**n + 1)) + 1)/2)**m
+        y = o*((math.cos((x*i + 1)*math.pi) + 1)/2)**m
 
         return y + f
 
@@ -124,14 +119,13 @@ class curve_second_half_cosine_logp1_t:
         f = self.floor
         o = self.sensitivity
         i = self.crossover
-        n = self.nonlinearity
         m = self.magnitude
 
         o *= x
         p = 1/i
         if x > p: x = p
 
-        y = o*((math.cos(math.pi*(math.log((math.e - 1)*(i*x)**n + 1) + 1)) + 1)/2)**m
+        y = o*((math.cos((math.log(x*i*(math.e - 1) + 1) + 1)*math.pi) + 1)/2)**m
 
         return y + f
 
@@ -986,7 +980,7 @@ class output_raw_accel_t:
         x *= table_size
         y *= table_size
 
-        print(f"{x:.32f},{y:.32f};")
+        print(f"{x:.64f},{y:.64f};")
 
     def __init__(self, generator, sample_density, apply_velocity):
         self.generator = generator
