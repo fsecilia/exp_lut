@@ -19,19 +19,19 @@ class params_t:
         self.limit_rate = limit_rate
 
 default_params = params_t(
-    curve = "tapered_logp1",
+    curve = "second_half_cosine_logp1",
     sample_density = 10,
-    crossover = 50*1.0,
-    sensitivity = 10.0*1.0,
-    nonlinearity = 0.0,
+    crossover = 50*2.0,
+    sensitivity = 10.0*1.2,
+    nonlinearity = 0.67,
     magnitude = 1.0,
-    limit = 0.01,
-    limit_rate = 250.0,
+    limit = 0.0,
+    limit_rate = 0.0,
     floor = 0.0,
 )
 
-# first quarter of sin of the log
-class curve_quarter_sin_log_t:
+# first quarter of sine
+class curve_first_quarter_sine_t:
     limited = True
     apply_sensitivity = False
     apply_velocity = False
@@ -41,65 +41,13 @@ class curve_quarter_sin_log_t:
         o = self.sensitivity
         i = self.crossover
         n = self.nonlinearity
-
-        o *= x
-        p = 1/i
-        if x > p: x = p
-
-        y = o*math.sin(math.pi*math.log((math.sqrt(math.e) - 1)*(i*x)**n + 1))
-
-        return y + f
-
-    def __init__(self, params):
-        self.floor = params.floor
-        self.sensitivity = params.sensitivity
-        self.crossover = params.crossover
-        self.nonlinearity = params.nonlinearity
-
-# cosine of the log
-class curve_cosine_log_t:
-    limited = True
-    apply_sensitivity = False
-    apply_velocity = False
-
-    def __call__(self, x):
-        f = self.floor
-        o = self.sensitivity
-        i = self.crossover
-        n = self.nonlinearity
-
-        o *= x
-        p = 1/i
-        if x > p: x = p
-
-        y = o*(1 - math.cos(math.pi*math.log((math.exp(1) - 1)*(i*x)**n + 1)))/2
-
-        return y + f
-
-    def __init__(self, params):
-        self.floor = params.floor
-        self.sensitivity = params.sensitivity
-        self.crossover = params.crossover
-        self.nonlinearity = params.nonlinearity
-
-# simple cosine
-class curve_cosine_t:
-    limited = True
-    apply_sensitivity = False
-    apply_velocity = False
-
-    def __call__(self, x):
-        f = self.floor
-        o = self.sensitivity
-        i = self.crossover
         m = self.magnitude
-        n = self.nonlinearity
 
         o *= x
         p = 1/i
         if x > p: x = p
 
-        y = o*math.pow((1 - math.cos(math.pi*(i*x)**n))/2, m)
+        y = o*math.sin((math.pi/2)*(i*x)**n)**m
 
         return y + f
 
@@ -107,8 +55,92 @@ class curve_cosine_t:
         self.floor = params.floor
         self.sensitivity = params.sensitivity
         self.crossover = params.crossover
-        self.magnitude = params.magnitude
         self.nonlinearity = params.nonlinearity
+        self.magnitude = params.magnitude
+
+# first quarter of sin of the log plus 1
+class curve_first_quarter_sine_logp1_t:
+    limited = True
+    apply_sensitivity = False
+    apply_velocity = False
+
+    def __call__(self, x):
+        f = self.floor
+        o = self.sensitivity
+        i = self.crossover
+        n = self.nonlinearity
+        m = self.magnitude
+
+        o *= x
+        p = 1/i
+        if x > p: x = p
+
+        y = o*math.sin((math.pi/2)*math.log((math.e - 1)*(i*x)**n + 1))**m
+
+        return y + f
+
+    def __init__(self, params):
+        self.floor = params.floor
+        self.sensitivity = params.sensitivity
+        self.crossover = params.crossover
+        self.nonlinearity = params.nonlinearity
+        self.magnitude = params.magnitude
+
+# second half of cosine
+class curve_second_half_cosine_t:
+    limited = True
+    apply_sensitivity = False
+    apply_velocity = False
+
+    def __call__(self, x):
+        f = self.floor
+        o = self.sensitivity
+        i = self.crossover
+        n = self.nonlinearity
+        m = self.magnitude
+
+        o *= x
+        p = 1/i
+        if x > p: x = p
+
+        y = o*((math.cos(math.pi*((i*x)**n + 1)) + 1)/2)**m
+
+        return y + f
+
+    def __init__(self, params):
+        self.floor = params.floor
+        self.sensitivity = params.sensitivity
+        self.crossover = params.crossover
+        self.nonlinearity = params.nonlinearity
+        self.magnitude = params.magnitude
+
+# second half of cosine of the log plus 1
+class curve_second_half_cosine_logp1_t:
+    limited = True
+    apply_sensitivity = False
+    apply_velocity = False
+
+    def __call__(self, x):
+        f = self.floor
+        o = self.sensitivity
+        i = self.crossover
+        n = self.nonlinearity
+        m = self.magnitude
+
+        o *= x
+        p = 1/i
+        if x > p: x = p
+
+        y = o*((math.cos(math.pi*(math.log((math.e - 1)*(i*x)**n + 1) + 1)) + 1)/2)**m
+
+        return y + f
+
+    def __init__(self, params):
+        self.floor = params.floor
+        self.sensitivity = params.sensitivity
+        self.crossover = params.crossover
+        self.nonlinearity = params.nonlinearity
+        self.magnitude = params.magnitude
 
 # logp1(softplus + offset), gives logp1 a horizontal attack
 class curve_tapered_logp1_t:
@@ -1050,11 +1082,12 @@ def create_arg_parser():
         "reverse_gaussian": curve_reverse_gaussian_t,
         "reverse_gaussian_log": curve_reverse_gaussian_log_t,
         "gaussian_log": curve_gaussian_log_t,
-        "cosine": curve_cosine_t,
-        "cosine_log": curve_cosine_log_t,
         "logp1": curve_logp1_t,
         "tapered_logp1": curve_tapered_logp1_t,
-        "quarter_sin_log": curve_quarter_sin_log_t,
+        "first_quarter_sine": curve_first_quarter_sine_t,
+        "first_quarter_sine_logp1": curve_first_quarter_sine_logp1_t,
+        "second_half_cosine": curve_second_half_cosine_t,
+        "second_half_cosine_logp1": curve_second_half_cosine_logp1_t,
     }
     impl.add_argument('-x', '--curve', choices=curve_choices.keys(), default=default_params.curve)
 
