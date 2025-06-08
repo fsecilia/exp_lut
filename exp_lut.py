@@ -20,11 +20,11 @@ class params_t:
 
 default_params = params_t(
     curve = "second_half_cosine_logp1",
-    sample_density = 10,
-    crossover = 50*2.0,
-    sensitivity = 10.0*1.2,
+    sample_density = 8,
+    crossover = 50*1.0,
+    sensitivity = 10.0*2.5,
     nonlinearity = 1.0,
-    magnitude = 0.67,
+    magnitude = 0.8,
     limit = 0.0,
     limit_rate = 0.0,
     floor = 0.0,
@@ -947,7 +947,7 @@ class limiter_null_t:
 class sampler_oversample_small_x_t:
     def __call__(self, t):
         s = self.sample_density
-        return (math.exp(s*t) - 1)/(2*(math.exp(s) - 1))
+        return (math.exp(s*t) - 1)/(math.exp(s) - 1)
 
     def __init__(self, num_samples, sample_density):
         self.num_samples = num_samples
