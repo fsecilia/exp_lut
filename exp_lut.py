@@ -19,16 +19,53 @@ class params_t:
         self.limit_rate = limit_rate
 
 default_params = params_t(
-    curve = "second_half_cosine_logp1",
+    curve = "tapered_logp1",
     sample_density = 8,
-    crossover = 50*1.0,
-    sensitivity = 10.0*2.5,
+    crossover = 50*5.0,
+    sensitivity = 10.0*2.0,
     nonlinearity = 1.0,
-    magnitude = 0.8,
-    limit = 0.0,
-    limit_rate = 0.0,
-    floor = 0.0,
+    magnitude = 1.0,
+    floor = 0.03,
+    limit = 0.03,
+    limit_rate = 10.0,
 )
+
+# tapers ln(x - x0) at 0 via (softplus - x1)
+class curve_tapered_logp1_t:
+    limited = True
+    apply_sensitivity = False
+    apply_velocity = False
+
+    def f(x, x0, i, n, m):
+        return math.log((i*(x - x0))**n + 1)**(1/m)
+
+    def g(x, x1, r):
+        return math.log(1 + math.exp(r*(x - x1)))/r
+
+    def __call__(self, x):
+        o = self.sensitivity
+        i = self.crossover
+
+        n = self.nonlinearity
+        m = self.magnitude
+        x0 = self.floor
+        x1 = self.limit
+        r = self.limit_rate
+
+        gfx = curve_tapered_logp1_t.g(curve_tapered_logp1_t.f(x, x0, i, n, m), x1, r)
+        gf1 = curve_tapered_logp1_t.g(curve_tapered_logp1_t.f(1, x0, i, n, m), x1, r)
+        hx = o*x*gfx/gf1
+
+        return hx
+
+    def __init__(self, params):
+        self.floor = params.floor
+        self.sensitivity = params.sensitivity
+        self.crossover = params.crossover
+        self.magnitude = params.magnitude
+        self.nonlinearity = params.nonlinearity
+        self.limit = params.limit
+        self.limit_rate = params.limit_rate
 
 # first quarter of sine
 class curve_first_quarter_sine_t:
@@ -136,8 +173,8 @@ class curve_second_half_cosine_logp1_t:
         self.nonlinearity = params.nonlinearity
         self.magnitude = params.magnitude
 
-# logp1(softplus + offset), gives logp1 a horizontal attack
-class curve_tapered_logp1_t:
+# logp1(softplus + offset)/x, gives logp1 a horizontal attack
+class curve_limited_tapered_logp1_t:
     limited = True
     apply_sensitivity = False
     apply_velocity = False
@@ -152,17 +189,17 @@ class curve_tapered_logp1_t:
         return math.log(1 + math.exp(r*(x - l)))/r
 
     def f(x, m, l, r):
-        a = curve_tapered_logp1_t.a
-        b = curve_tapered_logp1_t.b
-        c = curve_tapered_logp1_t.c
+        a = curve_limited_tapered_logp1_t.a
+        b = curve_limited_tapered_logp1_t.b
+        c = curve_limited_tapered_logp1_t.c
         return a(b(c(x, l, r)), m)
 
     def g(x, m, l, r):
-        f = curve_tapered_logp1_t.f
+        f = curve_limited_tapered_logp1_t.f
         return f(x, m, l, r) - f(0, m, l, r)
 
     def h(x, m, l, r):
-        g = curve_tapered_logp1_t.g
+        g = curve_limited_tapered_logp1_t.g
         return g(x, m, l, r)/g(1, m, l, r)
 
     def __call__(self, x):
@@ -177,7 +214,7 @@ class curve_tapered_logp1_t:
         p = 1/i
         if x > p: x = p
 
-        y = o*curve_tapered_logp1_t.h(i*x, m, l, r);
+        y = o*curve_limited_tapered_logp1_t.h(i*x, m, l, r);
 
         return y + f
 
@@ -211,7 +248,6 @@ class curve_logp1_t:
         self.magnitude = params.magnitude
         self.nonlinearity = params.nonlinearity
         self.x0 = params.limit
-
 
 # d/dx ((o e^(-(log(i x)/c)^(2 t)))/(2 t)) = -(o e^(-(log(i x)/c)^(2 t)) (log(i x)/c)^(2 t))/(x log(i x))
 # Gaussian of the log. This runs the whole negative portion of log through the gaussian. It picks up very quickly,
@@ -1077,11 +1113,12 @@ def create_arg_parser():
         "reverse_gaussian_log": curve_reverse_gaussian_log_t,
         "gaussian_log": curve_gaussian_log_t,
         "logp1": curve_logp1_t,
-        "tapered_logp1": curve_tapered_logp1_t,
+        "limited_tapered_logp1": curve_limited_tapered_logp1_t,
         "first_quarter_sine": curve_first_quarter_sine_t,
         "first_quarter_sine_logp1": curve_first_quarter_sine_logp1_t,
         "second_half_cosine": curve_second_half_cosine_t,
         "second_half_cosine_logp1": curve_second_half_cosine_logp1_t,
+        "tapered_logp1": curve_tapered_logp1_t,
     }
     impl.add_argument('-x', '--curve', choices=curve_choices.keys(), default=default_params.curve)
 
