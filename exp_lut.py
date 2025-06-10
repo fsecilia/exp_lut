@@ -19,17 +19,18 @@ class params_t:
         self.limit_rate = limit_rate
 
 default_params = params_t(
-    curve = "tapered_logp1",
+    curve = "softplus_into_logp1",
     sample_density = 9,
     crossover = 50*5.0,
-    sensitivity = 10.0*2.0,
+    sensitivity = 10.0*2.5,
     nonlinearity = 1.0,
     magnitude = 1.0,
-    floor = 0.001,
-    limit = 0.01,
-    limit_rate = 25.0,
+    floor = 0.01,
+    limit = 0.033,
+    limit_rate = 50.0,
 )
 
+# nearly pure logp1, input scaled, then scaled to y=1 at x=1
 class curve_logp1_t:
     limited = True
     apply_sensitivity = False
@@ -47,8 +48,12 @@ class curve_logp1_t:
         self.sensitivity = params.sensitivity
         self.crossover = params.crossover
 
-# tapers ln(x - x0) at 0 via (softplus - x1)
-class curve_tapered_logp1_t:
+# inverse composition of logp1_into_softplus: runs (softplus - x1) into ln(x - x0)
+
+# it is much smoother at the tangent than softplus into logp1, but it tends to start off negative and this must be subtracted, which
+# seems to move the whole graph around in odd ways sometimes.
+
+class curve_softplus_into_logp1_t:
     limited = True
     apply_sensitivity = False
     apply_velocity = False
@@ -69,8 +74,46 @@ class curve_tapered_logp1_t:
         x1 = self.limit
         r = self.limit_rate
 
-        gfx = curve_tapered_logp1_t.g(curve_tapered_logp1_t.f(x, x0, i, n, m), x1, r)
-        gf1 = curve_tapered_logp1_t.g(curve_tapered_logp1_t.f(1, x0, i, n, m), x1, r)
+        fgx = curve_softplus_into_logp1_t.f(curve_softplus_into_logp1_t.g(x, x1, r), x0, i, n, m)
+        fg0 = curve_softplus_into_logp1_t.f(curve_softplus_into_logp1_t.g(0, x1, r), x0, i, n, m)
+        fg1 = curve_softplus_into_logp1_t.f(curve_softplus_into_logp1_t.g(1, x1, r), x0, i, n, m)
+        jx = o*x*(fgx - fg0)/(fg1 - fg0)
+
+        return jx
+
+    def __init__(self, params):
+        self.floor = params.floor
+        self.sensitivity = params.sensitivity
+        self.crossover = params.crossover
+        self.magnitude = params.magnitude
+        self.nonlinearity = params.nonlinearity
+        self.limit = params.limit
+        self.limit_rate = params.limit_rate
+
+# composes ln(x - x0) into (softplus - x1) to give a controllable taper at x = 0
+class curve_logp1_into_softplus_t:
+    limited = True
+    apply_sensitivity = False
+    apply_velocity = False
+
+    def f(x, x0, i, n, m):
+        return math.log((i*(x - x0))**n + 1)**(1/m)
+
+    def g(x, x1, r):
+        return math.log(1 + math.exp(r*(x - x1)))/r
+
+    def __call__(self, x):
+        o = self.sensitivity
+        i = self.crossover
+
+        n = self.nonlinearity
+        m = self.magnitude
+        x0 = self.floor
+        x1 = self.limit
+        r = self.limit_rate
+
+        gfx = curve_logp1_into_softplus_t.g(curve_logp1_into_softplus_t.f(x, x0, i, n, m), x1, r)
+        gf1 = curve_logp1_into_softplus_t.g(curve_logp1_into_softplus_t.f(1, x0, i, n, m), x1, r)
         hx = o*x*gfx/gf1
 
         return hx
@@ -191,7 +234,7 @@ class curve_second_half_cosine_logp1_t:
         self.magnitude = params.magnitude
 
 # logp1(softplus + offset)/x, gives logp1 a horizontal attack
-class curve_limited_tapered_logp1_t:
+class curve_limited_logp1_into_softplus_t:
     limited = True
     apply_sensitivity = False
     apply_velocity = False
@@ -206,17 +249,17 @@ class curve_limited_tapered_logp1_t:
         return math.log(1 + math.exp(r*(x - l)))/r
 
     def f(x, m, l, r):
-        a = curve_limited_tapered_logp1_t.a
-        b = curve_limited_tapered_logp1_t.b
-        c = curve_limited_tapered_logp1_t.c
+        a = curve_limited_logp1_into_softplus_t.a
+        b = curve_limited_logp1_into_softplus_t.b
+        c = curve_limited_logp1_into_softplus_t.c
         return a(b(c(x, l, r)), m)
 
     def g(x, m, l, r):
-        f = curve_limited_tapered_logp1_t.f
+        f = curve_limited_logp1_into_softplus_t.f
         return f(x, m, l, r) - f(0, m, l, r)
 
     def h(x, m, l, r):
-        g = curve_limited_tapered_logp1_t.g
+        g = curve_limited_logp1_into_softplus_t.g
         return g(x, m, l, r)/g(1, m, l, r)
 
     def __call__(self, x):
@@ -231,7 +274,7 @@ class curve_limited_tapered_logp1_t:
         p = 1/i
         if x > p: x = p
 
-        y = o*curve_limited_tapered_logp1_t.h(i*x, m, l, r);
+        y = o*curve_limited_logp1_into_softplus_t.h(i*x, m, l, r);
 
         return y + f
 
@@ -1095,12 +1138,13 @@ def create_arg_parser():
         "reverse_gaussian_log": curve_reverse_gaussian_log_t,
         "gaussian_log": curve_gaussian_log_t,
         "logp1": curve_logp1_t,
-        "limited_tapered_logp1": curve_limited_tapered_logp1_t,
+        "limited_logp1_into_softplus": curve_limited_logp1_into_softplus_t,
         "first_quarter_sine": curve_first_quarter_sine_t,
         "first_quarter_sine_logp1": curve_first_quarter_sine_logp1_t,
         "second_half_cosine": curve_second_half_cosine_t,
         "second_half_cosine_logp1": curve_second_half_cosine_logp1_t,
-        "tapered_logp1": curve_tapered_logp1_t,
+        "logp1_into_softplus": curve_logp1_into_softplus_t,
+        "softplus_into_logp1": curve_softplus_into_logp1_t,
     }
     impl.add_argument('-x', '--curve', choices=curve_choices.keys(), default=default_params.curve)
 
