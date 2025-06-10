@@ -25,10 +25,27 @@ default_params = params_t(
     sensitivity = 10.0*2.0,
     nonlinearity = 1.0,
     magnitude = 1.0,
-    floor = 0.01,
+    floor = 0.001,
     limit = 0.01,
     limit_rate = 25.0,
 )
+
+class curve_logp1_t:
+    limited = True
+    apply_sensitivity = False
+    apply_velocity = False
+
+    def __call__(self, x):
+        o = self.sensitivity
+        i = self.crossover
+
+        y = o*x*math.log(i*x + 1)/math.log(i + 1)
+
+        return y
+
+    def __init__(self, params):
+        self.sensitivity = params.sensitivity
+        self.crossover = params.crossover
 
 # tapers ln(x - x0) at 0 via (softplus - x1)
 class curve_tapered_logp1_t:
@@ -225,29 +242,6 @@ class curve_limited_tapered_logp1_t:
         self.magnitude = params.magnitude
         self.limit = params.limit
         self.limit_rate = params.limit_rate
-
-class curve_logp1_t:
-    limited = True
-    apply_sensitivity = False
-    apply_velocity = False
-
-    def __call__(self, x):
-        f = self.floor
-        o = self.sensitivity
-        i = self.crossover
-        m = self.magnitude
-        n = self.nonlinearity
-
-        y = o*math.pow((math.log(i*x + 1)/math.log(2)), m)*math.pow(x, n)
-        return y + f
-
-    def __init__(self, params):
-        self.floor = params.floor
-        self.sensitivity = params.sensitivity
-        self.crossover = params.crossover
-        self.magnitude = params.magnitude
-        self.nonlinearity = params.nonlinearity
-        self.x0 = params.limit
 
 # d/dx ((o e^(-(log(i x)/c)^(2 t)))/(2 t)) = -(o e^(-(log(i x)/c)^(2 t)) (log(i x)/c)^(2 t))/(x log(i x))
 # Gaussian of the log. This runs the whole negative portion of log through the gaussian. It picks up very quickly,
@@ -784,18 +778,6 @@ class curve_linear_t:
     def __call__(self, x):
         s = self.sensitivity
         return x*x*s
-
-    def __init__(self, params):
-        self.sensitivity = params.sensitivity
-
-class curve_logp1_t:
-    limited = True
-    apply_sensitivity = False
-    apply_velocity = False
-
-    def __call__(self, x):
-        s = self.sensitivity
-        return x*s*math.log(x + 1)/math.log(2)
 
     def __init__(self, params):
         self.sensitivity = params.sensitivity
