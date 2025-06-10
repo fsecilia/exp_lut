@@ -20,14 +20,14 @@ class params_t:
 
 default_params = params_t(
     curve = "tapered_logp1",
-    sample_density = 8,
+    sample_density = 9,
     crossover = 50*5.0,
     sensitivity = 10.0*2.0,
     nonlinearity = 1.0,
     magnitude = 1.0,
-    floor = 0.03,
-    limit = 0.03,
-    limit_rate = 10.0,
+    floor = 0.01,
+    limit = 0.01,
+    limit_rate = 25.0,
 )
 
 # tapers ln(x - x0) at 0 via (softplus - x1)
