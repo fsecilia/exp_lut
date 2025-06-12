@@ -21,12 +21,12 @@ class params_t:
 default_params = params_t(
     curve = "softplus_into_logp1",
     sample_density = 9,
-    crossover = 50*5.0,
-    sensitivity = 10.0*2.5,
+    crossover = 50*3.0,
+    sensitivity = 10.0*2.0,
     nonlinearity = 1.0,
     magnitude = 1.0,
-    floor = 0.01,
-    limit = 0.033,
+    floor = 0.0,
+    limit = 0.045,
     limit_rate = 50.0,
 )
 
@@ -49,10 +49,9 @@ class curve_logp1_t:
         self.crossover = params.crossover
 
 # inverse composition of logp1_into_softplus: runs (softplus - x1) into ln(x - x0)
-
-# it is much smoother at the tangent than softplus into logp1, but it tends to start off negative and this must be subtracted, which
-# seems to move the whole graph around in odd ways sometimes.
-
+# it is much smoother at the tangent than softplus into logp1, but it tends to start off negative and this must be
+# subtracted off to stay at or above 0, which makes the whole graph move around in odd ways sometimes as you change
+# parameters near the edges of their ranges, particularly r.
 class curve_softplus_into_logp1_t:
     limited = True
     apply_sensitivity = False
