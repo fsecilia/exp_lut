@@ -21,8 +21,8 @@ class params_t:
 default_params = params_t(
     curve = "softplus_into_logp1",
     sample_density = 9,
-    crossover = 50*3.0,
-    sensitivity = 10.0*2.0,
+    crossover = 50*10.0,
+    sensitivity = 10.0*1.0,
     nonlinearity = 1.0,
     magnitude = 1.0,
     floor = 0.0,
